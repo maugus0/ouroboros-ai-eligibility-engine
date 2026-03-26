@@ -10,7 +10,7 @@ router = APIRouter(tags=["Health"])
 @router.get("/")
 async def root():
     return {
-        "message": "Eligibility & Matching Agent",
+        "message": "Eligibility Engine",
         "version": APP_VERSION,
         "status": "healthy",
     }

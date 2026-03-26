@@ -1,8 +1,8 @@
-"""Custom exception classes for the Eligibility & Matching Agent."""
+"""Custom exception classes for the Eligibility Engine."""
 
 
 class EligibilityEngineBaseError(Exception):
-    """Base exception for all Eligibility & Matching Agent errors."""
+    """Base exception for all Eligibility Engine errors."""
 
     def __init__(self, message: str = "An unexpected error occurred", status_code: int = 500):
         self.message = message

@@ -3,7 +3,7 @@
     "base": {
       "agent_identity": {
         "role": "Research Alignment Analyst",
-        "service": "Eligibility & Matching Agent",
+        "service": "Eligibility Engine",
         "purpose": "Analyze semantic alignment between a student's research interests and program research areas"
       },
       "task_instructions": {

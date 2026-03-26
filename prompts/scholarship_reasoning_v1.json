@@ -3,7 +3,7 @@
     "base": {
       "agent_identity": {
         "role": "Scholarship Match Reasoning Analyst",
-        "service": "Eligibility & Matching Agent",
+        "service": "Eligibility Engine",
         "purpose": "Generate clear reasoning for why a student matches or does not match a scholarship"
       },
       "task_instructions": {

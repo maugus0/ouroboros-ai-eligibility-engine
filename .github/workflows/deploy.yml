@@ -1,4 +1,4 @@
-# OuroborosAI Eligibility & Matching Agent — CI/CD (GitHub Actions)
+# OuroborosAI Eligibility Engine — CI/CD (GitHub Actions)
 #
 # Action major tags (verify on GitHub releases):
 #   actions/checkout@v6 — https://github.com/actions/checkout/releases
@@ -10,7 +10,7 @@
 # Older action bundles shipped with Node 20; newer majors run on Node 24.
 # See: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
 
-name: OuroborosAI Eligibility & Matching CI/CD Pipeline
+name: OuroborosAI Eligibility Engine CI/CD Pipeline
 
 on:
   pull_request:
@@ -219,7 +219,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: eligibility-matching-agent:latest
+          tags: eligibility-engine:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -232,7 +232,7 @@ jobs:
     steps:
       - name: Generate Summary
         run: |
-          echo "# OuroborosAI Eligibility & Matching — CI/CD Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# OuroborosAI Eligibility Engine — CI/CD Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY

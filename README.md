@@ -1,6 +1,8 @@
-# Ouroboros Eligibility & Matching Agent
+# Ouroboros Eligibility Engine
 
-Microservice for the **Ouroboros AI** scholarship discovery platform. The Eligibility & Matching Agent computes rule-based + LLM-assisted match scores for programs and scholarships, generates explainable attribution reports, and leverages PostgreSQL + pgvector for semantic research alignment matching. Raw SQL with `asyncpg` and the repository pattern (NO SQLAlchemy).
+Microservice for the **Ouroboros AI** scholarship discovery platform. The Eligibility Engine computes rule-based + LLM-assisted match scores for programs and scholarships, generates explainable attribution reports, and leverages PostgreSQL + pgvector for semantic research alignment matching. Raw SQL with `asyncpg` and the repository pattern (NO SQLAlchemy).
+
+**Repository:** https://github.com/maugus0/ouroboros-ai-eligibility-engine
 
 ---
 
@@ -28,7 +30,7 @@ Microservice for the **Ouroboros AI** scholarship discovery platform. The Eligib
 
 ## Overview
 
-The Eligibility & Matching Agent is a critical microservice in the Ouroboros AI platform that:
+The Eligibility Engine is a critical microservice in the Ouroboros AI platform that:
 
 1. **Computes program match scores** with weighted scoring (GPA 20%, Relevance 30%, Prerequisites 25%, Research Alignment 15%, Practical 10%)
 2. **Computes scholarship match scores** with weighted scoring (Eligibility 40%, Preferred Criteria 30%, Funding 20%, Competition 10%)
@@ -59,11 +61,11 @@ The Eligibility & Matching Agent is a critical microservice in the Ouroboros AI 
                │ X-Service-Token
                ▼
 ┌──────────────────────────────────────────────────────┐
-│       Eligibility & Matching Agent (8004)             │
+│         Eligibility Engine (8004)                    │
 │                                                      │
 │  ┌─────────────────────────────────────────────┐     │
 │  │  API Layer (FastAPI)                        │     │
-│  │  POST /matching/evaluate                    │     │
+│  │  POST /matching/evaluate                     │     │
 │  │  GET  /matching/results/{user_id}           │     │
 │  │  GET  /matching/results/detail/{match_id}   │     │
 │  │  GET  /attribution/report/{match_id}        │     │
@@ -150,9 +152,11 @@ The Eligibility & Matching Agent is a critical microservice in the Ouroboros AI 
 git clone https://github.com/maugus0/ouroboros-ai-eligibility-engine.git
 cd ouroboros-ai-eligibility-engine
 
+# Create virtual environment
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
+# Install dependencies
 pip install -r requirements-dev.txt
 ```
 
@@ -175,6 +179,8 @@ X_SERVICE_TOKEN=your-secret-service-token-change-this
 OPENAI_API_KEY=sk-your-openai-key-here
 ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
 ```
+
+See [Configuration](#configuration) for the full reference.
 
 ### 3. Database Setup
 
@@ -445,7 +451,7 @@ tests/
 
 ## CI/CD Pipeline
 
-**Workflow**: `.github/workflows/deploy.yml`
+**Workflow**: `.github/workflows/deploy.yml` (GitHub Actions name: **OuroborosAI Eligibility Engine CI/CD Pipeline**)
 
 **Trigger**: Pull requests to `main` or `develop`
 
@@ -478,14 +484,14 @@ docker compose down -v    # remove volumes
 ### Docker (Service Only)
 
 ```bash
-docker build -t eligibility-matching-agent .
+docker build -t eligibility-engine .
 
 docker run -p 8004:8004 \
   -e DB_HOST=postgres-host \
   -e DB_PASSWORD=secret \
   -e X_SERVICE_TOKEN=token \
   -e OPENAI_API_KEY=sk-... \
-  eligibility-matching-agent
+  eligibility-engine
 ```
 
 ---
