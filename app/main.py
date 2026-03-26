@@ -1,4 +1,4 @@
-"""FastAPI application entry point for the Eligibility & Matching Agent."""
+"""FastAPI application entry point for the Eligibility Engine."""
 
 from contextlib import asynccontextmanager
 
@@ -52,7 +52,7 @@ async def lifespan(_application: FastAPI):
 
 
 app = FastAPI(
-    title="Eligibility & Matching Agent",
+    title="Eligibility Engine",
     version=APP_VERSION,
     description=(
         "Microservice for computing match scores, generating attribution reports, " "and semantic research alignment"

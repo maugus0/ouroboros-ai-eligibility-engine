@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pre-commit check script for Eligibility & Matching Agent
+# Pre-commit check script for Eligibility Engine
 set -e
 
 echo "Running pre-commit checks..."

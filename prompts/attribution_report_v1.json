@@ -3,7 +3,7 @@
     "base": {
       "agent_identity": {
         "role": "Attribution Report Generator",
-        "service": "Eligibility & Matching Agent",
+        "service": "Eligibility Engine",
         "purpose": "Generate a structured attribution report explaining how a match score was computed"
       },
       "task_instructions": {

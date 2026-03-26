@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Starting Eligibility & Matching Agent..."
+echo "Starting Eligibility Engine..."
 
 for VENV_DIR in ".venv" "venv" "env"; do
     if [ -d "${VENV_DIR}" ] && [ -f "${VENV_DIR}/bin/activate" ]; then

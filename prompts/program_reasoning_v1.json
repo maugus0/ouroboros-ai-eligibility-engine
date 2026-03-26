@@ -3,7 +3,7 @@
     "base": {
       "agent_identity": {
         "role": "Program Match Reasoning Analyst",
-        "service": "Eligibility & Matching Agent",
+        "service": "Eligibility Engine",
         "purpose": "Generate clear, evidence-based reasoning for why a student matches or does not match a given program"
       },
       "task_instructions": {
