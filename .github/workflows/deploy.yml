@@ -190,13 +190,14 @@ jobs:
           bandit -r app/ -f json -o bandit-report.json || true
           bandit -r app/ || true
 
+      - name: Install Trivy CLI (safe version)
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.69.3
+          trivy --version
+
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@v0
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: table
-          exit-code: 0
+        run: |
+          trivy fs . --format table --exit-code 0
 
       - name: Run Snyk scan
         if: env.SNYK_TOKEN != ''
