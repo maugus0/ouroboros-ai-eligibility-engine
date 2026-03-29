@@ -1,5 +1,7 @@
 # Ouroboros Eligibility Engine
 
+![CI/CD](https://github.com/maugus0/ouroboros-ai-eligibility-engine/actions/workflows/deploy.yml/badge.svg)
+
 Microservice for the **Ouroboros AI** scholarship discovery platform. The Eligibility Engine computes rule-based + LLM-assisted match scores for programs and scholarships, generates explainable attribution reports, and leverages PostgreSQL + pgvector for semantic research alignment matching. Raw SQL with `asyncpg` and the repository pattern (NO SQLAlchemy).
 
 **Repository:** https://github.com/maugus0/ouroboros-ai-eligibility-engine
@@ -453,7 +455,7 @@ tests/
 
 **Workflow**: `.github/workflows/deploy.yml` (GitHub Actions name: **OuroborosAI Eligibility Engine CI/CD Pipeline**)
 
-**Trigger**: Pull requests to `main` or `develop`
+**Trigger**: Pull requests to `main` or `develop`, and pushes to `main`
 
 ### Pipeline Stages
 
@@ -464,8 +466,9 @@ tests/
 | **Unit Tests** | `pytest tests/unit/` with JUnit XML artifact |
 | **Type Check** | mypy — blocking (after format + lint) |
 | **Tests + Coverage** | Full `pytest tests/` with HTML + Cobertura XML |
-| **Security Audit** | Bandit (JSON artifact) |
-| **Docker Build** | Verify image builds — no push |
+| **Security Audit** | Bandit + Trivy + optional Snyk |
+| **Docker Build** | Verify image builds on PRs |
+| **GHCR Push** | Build and push image to GHCR on merge to `main` |
 | **Summary** | Markdown table of all job results |
 
 ---
