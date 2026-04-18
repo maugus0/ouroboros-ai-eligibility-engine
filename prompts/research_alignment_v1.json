@@ -16,18 +16,22 @@
         ]
       },
       "output_format": {
-        "format": "text",
+        "format": "json",
         "schema": {
+          "score": "number — research alignment score between 0 and 100",
           "alignment_summary": "string — overall alignment assessment",
           "overlapping_themes": "array of strings — shared research themes",
           "unique_student_interests": "array of strings — student interests not covered by program",
-          "recommended_faculty": "array of strings — faculty members with overlapping research (if available)"
+          "recommended_faculty": "array of strings — faculty members with overlapping research (if available)",
+          "confidence": "string — one of high, medium, low"
         }
       },
       "constraints": [
         "Focus on substantive research alignment, not just keyword matching",
         "Consider interdisciplinary connections",
         "Be specific about which research areas overlap",
+        "Return valid JSON only",
+        "The score must be an integer or float between 0 and 100",
         "Keep analysis between 100-200 words"
       ]
     }

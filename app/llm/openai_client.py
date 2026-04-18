@@ -1,6 +1,6 @@
 """OpenAI client with retry logic."""
 
-from typing import Any
+from typing import Any, Optional
 
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -30,9 +30,9 @@ def get_openai_client():
 async def call_openai(
     prompt: str,
     system_message: str = "",
-    max_tokens: int | None = None,
-    temperature: float | None = None,
-    response_format: str | None = None,
+    max_tokens: Optional[int] = None,
+    temperature: Optional[float] = None,
+    response_format: Optional[str] = None,
 ) -> dict[str, Any]:
     """Call OpenAI API with retry logic.
 

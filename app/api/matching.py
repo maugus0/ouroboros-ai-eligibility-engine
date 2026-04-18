@@ -1,5 +1,7 @@
 """Matching evaluation endpoints."""
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
 
 from app.middleware.service_auth import require_service_token
@@ -28,7 +30,7 @@ async def evaluate_match(request: EvaluateRequest):
 @router.get("/results/{user_id}")
 async def get_user_results(
     user_id: str,
-    entity_type: str | None = Query(default=None, description="Filter by 'program' or 'scholarship'"),
+    entity_type: Optional[str] = Query(default=None, description="Filter by 'program' or 'scholarship'"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ):

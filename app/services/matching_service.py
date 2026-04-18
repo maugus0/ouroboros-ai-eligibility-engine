@@ -1,7 +1,7 @@
 """Orchestrates program and scholarship matching evaluations."""
 
 import time
-from typing import Any
+from typing import Any, Optional
 
 from app.config import settings
 from app.core.logging import get_logger
@@ -11,6 +11,7 @@ from app.repositories.postgres_history_repo import ScoringHistoryRepository
 from app.repositories.postgres_match_repo import MatchResultRepository
 from app.services.embedding_service import EmbeddingService
 from app.services.explainability_service import ExplainabilityService
+from app.services.llm_service import LLMPipelineService
 from app.services.scoring.program_scorer import ProgramScorer
 from app.services.scoring.scholarship_scorer import ScholarshipScorer
 
@@ -26,6 +27,7 @@ class MatchingService:
         self.history_repo = ScoringHistoryRepository()
         self.embedding_service = EmbeddingService()
         self.explainability_service = ExplainabilityService()
+        self.llm_service = LLMPipelineService()
 
     async def evaluate(  # pylint: disable=too-many-locals
         self,
@@ -44,11 +46,16 @@ class MatchingService:
         start = time.perf_counter()
 
         if entity_type == EntityType.PROGRAM:
-            research_similarity = await self._get_research_similarity(user_profile, entity_data)
+            research_alignment = await self._get_research_alignment(user_profile, entity_data)
             total_score, breakdown, metadata = ProgramScorer.compute_score(
-                user_profile, entity_data, research_similarity
+                user_profile,
+                entity_data,
+                research_similarity=research_alignment.get("similarity", 0.0),
+                research_alignment_score=research_alignment.get("score"),
+                research_alignment_metadata=research_alignment,
             )
         else:
+            research_alignment = None
             total_score, breakdown, metadata = ScholarshipScorer.compute_score(user_profile, entity_data)
 
         confidence = self._determine_confidence(total_score)
@@ -61,8 +68,8 @@ class MatchingService:
             "match_score": round(total_score, 2),
             "score_breakdown": breakdown,
             "confidence_level": confidence,
-            "llm_model_used": None,
-            "llm_fallback_used": False,
+            "llm_model_used": research_alignment.get("model") if research_alignment else None,
+            "llm_fallback_used": research_alignment.get("fallback_used", False) if research_alignment else False,
             "total_processing_time_ms": elapsed_ms,
         }
 
@@ -93,7 +100,7 @@ class MatchingService:
                 match_score=total_score,
             )
             result["attribution_report"] = attribution
-            if attribution and attribution.get("llm_model"):
+            if attribution and attribution.get("llm_model") and not match_result.get("llm_model_used"):
                 await self.match_repo.execute_write(
                     "UPDATE match_results SET llm_model_used = $1 WHERE id = $2",
                     attribution["llm_model"],
@@ -115,7 +122,7 @@ class MatchingService:
     async def get_results_by_user(
         self,
         user_id: str,
-        entity_type: str | None = None,
+        entity_type: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> dict[str, Any]:
@@ -133,19 +140,33 @@ class MatchingService:
             "total_pages": total_pages,
         }
 
-    async def get_result_by_id(self, match_id: str) -> dict[str, Any] | None:
+    async def get_result_by_id(self, match_id: str) -> Optional[dict[str, Any]]:
         """Retrieve a single match result by ID."""
         return await self.match_repo.get_by_id(match_id)
 
-    async def _get_research_similarity(
+    async def _get_research_alignment(
         self,
         user_profile: dict[str, Any],
-        _program: dict[str, Any],
-    ) -> float:
-        """Get research alignment similarity via pgvector if research interests exist."""
+        program: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Get research alignment via LLM first, then fall back to pgvector similarity."""
         research_interests = user_profile.get("research_interests", "")
         if not research_interests:
-            return 0.0
+            return {
+                "score": 0.0,
+                "similarity": 0.0,
+                "provider": "none",
+                "model": None,
+                "fallback_used": False,
+                "alignment_summary": "",
+            }
+
+        try:
+            llm_result = await self.llm_service.assess_research_alignment(user_profile=user_profile, entity_data=program)
+            llm_result.setdefault("similarity", llm_result.get("score", 0.0) / 100.0)
+            return llm_result
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.warning("research_alignment_llm_failed", error=str(exc))
 
         try:
             results = await self.embedding_service.search_similar(
@@ -153,11 +174,26 @@ class MatchingService:
                 top_k=1,
             )
             if results:
-                return results[0].get("similarity_score", 0.0)
+                similarity = float(results[0].get("similarity_score", 0.0))
+                return {
+                    "score": similarity * 100.0,
+                    "similarity": similarity,
+                    "provider": "pgvector_fallback",
+                    "model": settings.OPENAI_EMBEDDING_MODEL,
+                    "fallback_used": True,
+                    "alignment_summary": "Fallback vector similarity used after LLM alignment failed.",
+                }
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning("research_similarity_failed", error=str(exc))
+            logger.warning("research_alignment_fallback_failed", error=str(exc))
 
-        return 0.0
+        return {
+            "score": 0.0,
+            "similarity": 0.0,
+            "provider": "unavailable",
+            "model": None,
+            "fallback_used": True,
+            "alignment_summary": "",
+        }
 
     @staticmethod
     def _determine_confidence(score: float) -> str:

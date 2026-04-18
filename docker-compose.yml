@@ -1,13 +1,11 @@
-version: '3.8'
-
 services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: eligibility-postgres
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-root_password}
-      POSTGRES_DB: ${DB_NAME:-ouroboros_eligibility_db}
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: root_password
+      POSTGRES_DB: ouroboros_eligibility_db
+      POSTGRES_USER: postgres
     ports:
       - "${DOCKER_POSTGRES_PORT:-5433}:5432"
     volumes:

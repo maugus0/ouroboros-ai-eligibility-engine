@@ -71,20 +71,25 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
+    @staticmethod
+    def _get_env(primary_key: str, secondary_key: str, default_value: str) -> str:
+        """Prefer app runtime `DB_*` vars, then fallback `POSTGRES_*`, then defaults."""
+        return os.getenv(primary_key, os.getenv(secondary_key, default_value))
+
     def get_db_host(self) -> str:
-        return os.getenv("POSTGRES_HOST", self.DB_HOST)
+        return self._get_env("DB_HOST", "POSTGRES_HOST", self.DB_HOST)
 
     def get_db_name(self) -> str:
-        return os.getenv("POSTGRES_DATABASE", self.DB_NAME)
+        return self._get_env("DB_NAME", "POSTGRES_DATABASE", self.DB_NAME)
 
     def get_db_user(self) -> str:
-        return os.getenv("POSTGRES_USER", self.DB_USERNAME)
+        return self._get_env("DB_USERNAME", "POSTGRES_USER", self.DB_USERNAME)
 
     def get_db_password(self) -> str:
-        return os.getenv("POSTGRES_PASSWORD", self.DB_PASSWORD)
+        return self._get_env("DB_PASSWORD", "POSTGRES_PASSWORD", self.DB_PASSWORD)
 
     def get_db_port(self) -> int:
-        val = os.getenv("POSTGRES_PORT")
+        val = os.getenv("DB_PORT", os.getenv("POSTGRES_PORT"))
         return int(val) if val is not None else self.DB_PORT
 
     def validate_weights(self):

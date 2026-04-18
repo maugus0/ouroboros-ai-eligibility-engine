@@ -7,7 +7,7 @@ runtime context and serialised for the LLM.
 import json
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from app.core.logging import get_logger
 
@@ -33,7 +33,7 @@ def load_prompt_template(filename: str) -> dict[str, Any]:
 
 def merge_runtime_context(
     template: dict[str, Any],
-    context: dict[str, Any] | None = None,
+    context: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Merge runtime context into the base prompt structure.
 
@@ -52,7 +52,7 @@ def merge_runtime_context(
 
 def build_prompt_json(
     template_file: str,
-    context: dict[str, Any] | None = None,
+    context: Optional[dict[str, Any]] = None,
 ) -> str:
     """Load template, merge context, return a JSON string for the LLM."""
     template = load_prompt_template(template_file)
@@ -68,7 +68,7 @@ def build_prompt_json(
 
 def build_prompt_text(
     template_file: str,
-    context: dict[str, Any] | None = None,
+    context: Optional[dict[str, Any]] = None,
 ) -> str:
     """Load template, merge context, return a structured text string.
 

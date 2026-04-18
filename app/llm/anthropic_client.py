@@ -1,6 +1,6 @@
 """Anthropic client with retry logic."""
 
-from typing import Any
+from typing import Any, Optional
 
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -30,7 +30,7 @@ def get_anthropic_client():
 async def call_anthropic(
     prompt: str,
     system_message: str = "",
-    max_tokens: int | None = None,
+    max_tokens: Optional[int] = None,
 ) -> dict[str, Any]:
     """Call Anthropic API with retry logic.
 
