@@ -1,5 +1,7 @@
 """Unit tests for batch matching orchestration."""
 
+# pylint: disable=protected-access
+
 import pytest
 
 from app.services.matching_service import MatchingService
@@ -57,3 +59,22 @@ async def test_evaluate_batch_returns_count_and_per_entity_results(monkeypatch):
     assert [item["entity_id"] for item in result["results"]] == ["scholarship-1", "scholarship-2"]
     assert result["results"][0]["match_result"]["match_score"] == 80.0
     assert captured_include_attribution == [True, False]
+
+
+def test_extract_program_research_focus_prefers_research_specific_fields():
+    program = {
+        "research_focus": "Multilingual NLP and responsible AI",
+        "faculty_research": ["Large language models"],
+        "keywords": ["ignore-me-only-if-no-research-focus"],
+    }
+
+    result = MatchingService._extract_program_research_focus(program)
+
+    assert "Multilingual NLP and responsible AI" in result
+    assert "Large language models" in result
+
+
+def test_combine_research_alignment_scores_blends_vector_and_llm():
+    combined = MatchingService._combine_research_alignment_scores(vector_similarity=0.8, llm_score=90.0)
+
+    assert combined == pytest.approx(86.0)

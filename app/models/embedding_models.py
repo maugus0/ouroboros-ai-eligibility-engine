@@ -1,7 +1,7 @@
 """Pydantic schemas for research embeddings and vector search."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +10,9 @@ class ResearchEmbedding(BaseModel):
     """A stored research interest embedding."""
 
     id: str
-    student_profile_id: str
+    entity_type: Literal["student", "program"]
+    entity_id: str
+    student_profile_id: Optional[str] = None
     research_interest_text: str
     embedding_model: str = "text-embedding-3-small"
     token_count: Optional[int] = None
@@ -21,7 +23,8 @@ class ResearchEmbedding(BaseModel):
 class EmbeddingCreateRequest(BaseModel):
     """Request to create a research embedding."""
 
-    student_profile_id: str
+    entity_type: Literal["student", "program"] = "student"
+    entity_id: str
     research_interest_text: str = Field(
         ...,
         min_length=10,

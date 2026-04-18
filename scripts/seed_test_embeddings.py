@@ -4,16 +4,15 @@ import asyncio
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from dotenv import load_dotenv
-
 load_dotenv(ROOT_DIR / ".env")
 
-from app.config import settings
-from app.services.embedding_service import EmbeddingService
+from app.services.embedding_service import EmbeddingService  # pylint: disable=wrong-import-position
 
 SAMPLE_RESEARCH_INTERESTS = [
     {
@@ -38,6 +37,17 @@ SAMPLE_RESEARCH_INTERESTS = [
     },
 ]
 
+SAMPLE_PROGRAM_RESEARCH_FOCUS = [
+    {
+        "program_id": "10000000-0000-0000-0000-000000000001",
+        "text": "Natural language processing, multilingual information retrieval, and human-centered AI",
+    },
+    {
+        "program_id": "10000000-0000-0000-0000-000000000002",
+        "text": "Robotics, reinforcement learning, and embodied AI systems",
+    },
+]
+
 
 async def seed_embeddings():
     service = EmbeddingService()
@@ -45,12 +55,23 @@ async def seed_embeddings():
     for sample in SAMPLE_RESEARCH_INTERESTS:
         print(f"Generating embedding for profile: {sample['student_profile_id']}")
         try:
-            await service.store_embedding(
+            await service.store_student_embedding(
                 student_profile_id=sample["student_profile_id"],
                 research_interest_text=sample["text"],
             )
             print(f"  \u2713 Stored embedding for {sample['student_profile_id']}")
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            print(f"  \u2717 Failed: {exc}")
+
+    for sample in SAMPLE_PROGRAM_RESEARCH_FOCUS:
+        print(f"Generating embedding for program: {sample['program_id']}")
+        try:
+            await service.store_program_embedding(
+                program_id=sample["program_id"],
+                research_focus_text=sample["text"],
+            )
+            print(f"  \u2713 Stored embedding for {sample['program_id']}")
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             print(f"  \u2717 Failed: {exc}")
 
     print("\nSeeding complete.")

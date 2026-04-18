@@ -164,8 +164,23 @@ async def test_orchestrator_request_persists_match_and_exposes_attribution_repor
             "fallback_used": False,
         }
 
+    async def fake_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, student_research_text, program_id, program_research_text)
+        return {
+            "similarity": 0.88,
+            "student_embedding_reused": False,
+            "program_embedding_reused": False,
+        }
+
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
     monkeypatch.setattr(LLMPipelineService, "generate_attribution", fake_generate_attribution)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", fake_compute_pair_similarity)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -256,7 +271,22 @@ async def test_orchestrator_request_without_attribution_persists_match_and_suppo
         _ = (user_profile, entity_data)
         return _research_alignment_result(72.0)
 
+    async def fake_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, student_research_text, program_id, program_research_text)
+        return {
+            "similarity": 0.72,
+            "student_embedding_reused": False,
+            "program_embedding_reused": False,
+        }
+
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", fake_compute_pair_similarity)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -350,8 +380,23 @@ async def test_program_output_baseline_uses_expected_score_and_rule_based_attrib
         _ = (match_id, user_profile, entity_data, score_breakdown, match_score)
         raise RuntimeError("LLM unavailable for baseline verification")
 
+    async def fake_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, student_research_text, program_id, program_research_text)
+        return {
+            "similarity": 0.8,
+            "student_embedding_reused": True,
+            "program_embedding_reused": False,
+        }
+
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
     monkeypatch.setattr(LLMPipelineService, "generate_attribution", fail_generate_attribution)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", fake_compute_pair_similarity)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -655,8 +700,14 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
         _ = (user_profile, entity_data)
         raise RuntimeError("llm alignment failed")
 
-    async def failing_search_similar(_self, query_text: str, top_k=None, similarity_threshold=None):
-        _ = (query_text, top_k, similarity_threshold)
+    async def failing_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, student_research_text, program_id, program_research_text)
         raise RuntimeError("pgvector lookup failed")
 
     async def fail_generate_attribution(
@@ -671,7 +722,7 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
         raise RuntimeError("LLM unavailable for degradation verification")
 
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", failing_assess_research_alignment)
-    monkeypatch.setattr(EmbeddingService, "search_similar", failing_search_similar)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", failing_compute_pair_similarity)
     monkeypatch.setattr(LLMPipelineService, "generate_attribution", fail_generate_attribution)
 
     user_id = str(uuid.uuid4())
@@ -745,7 +796,26 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
         query_text = user_profile["research_interests"]
         return _research_alignment_result(mapping[query_text] * 100.0)
 
+    async def fake_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, program_id, program_research_text)
+        mapping = {
+            "high-fit research": 0.9,
+            "low-fit research": 0.1,
+        }
+        return {
+            "similarity": mapping[student_research_text],
+            "student_embedding_reused": False,
+            "program_embedding_reused": False,
+        }
+
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", fake_compute_pair_similarity)
 
     user_id = str(uuid.uuid4())
     high_program_entity_id = str(uuid.uuid4())
