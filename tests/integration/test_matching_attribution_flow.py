@@ -3,6 +3,7 @@
 # pylint: disable=too-many-locals,too-many-statements,broad-exception-caught
 
 import uuid
+from typing import Optional
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -38,6 +39,15 @@ async def _cleanup_match_records(user_id: str) -> None:
     pool = get_pool()
     async with pool.acquire() as conn:
         await conn.execute("DELETE FROM match_results WHERE user_id = $1", user_id)
+
+
+async def _cleanup_pool_resources(user_id: Optional[str], pool_created: bool) -> None:
+    """Only run cleanup if the integration DB pool was successfully created."""
+    if not pool_created:
+        return
+    if user_id is not None:
+        await _cleanup_match_records(user_id)
+    await close_pool()
 
 
 def _program_payload(
@@ -160,10 +170,12 @@ async def test_orchestrator_request_persists_match_and_exposes_attribution_repor
     match_repo = MatchResultRepository()
     history_repo = ScoringHistoryRepository()
     attribution_repo = AttributionReportRepository()
+    pool_created = False
 
     try:
         try:
             await _create_test_pool()
+            pool_created = True
         except Exception as exc:  # pragma: no cover - environment-dependent
             pytest.skip(f"Integration DB unavailable: {exc}")
 
@@ -227,8 +239,7 @@ async def test_orchestrator_request_persists_match_and_exposes_attribution_repor
             assert report_body["data"]["match_id"] == match_id
             assert report_body["data"]["reasoning"] == "Mock reasoning for integration flow."
     finally:
-        await _cleanup_match_records(user_id)
-        await close_pool()
+        await _cleanup_pool_resources(user_id, pool_created)
 
 
 @pytest.mark.anyio
@@ -248,10 +259,12 @@ async def test_orchestrator_request_without_attribution_persists_match_and_suppo
 
     match_repo = MatchResultRepository()
     attribution_repo = AttributionReportRepository()
+    pool_created = False
 
     try:
         try:
             await _create_test_pool()
+            pool_created = True
         except Exception as exc:  # pragma: no cover - environment-dependent
             pytest.skip(f"Integration DB unavailable: {exc}")
 
@@ -309,8 +322,7 @@ async def test_orchestrator_request_without_attribution_persists_match_and_suppo
             assert missing_report_body["message"] == "Attribution report not found"
             assert missing_report_body["data"] is None
     finally:
-        await _cleanup_match_records(user_id)
-        await close_pool()
+        await _cleanup_pool_resources(user_id, pool_created)
 
 
 @pytest.mark.anyio
@@ -374,10 +386,12 @@ async def test_program_output_baseline_uses_expected_score_and_rule_based_attrib
     match_repo = MatchResultRepository()
     history_repo = ScoringHistoryRepository()
     attribution_repo = AttributionReportRepository()
+    pool_created = False
 
     try:
         try:
             await _create_test_pool()
+            pool_created = True
         except Exception as exc:  # pragma: no cover - environment-dependent
             pytest.skip(f"Integration DB unavailable: {exc}")
 
@@ -438,13 +452,13 @@ async def test_program_output_baseline_uses_expected_score_and_rule_based_attrib
             assert stored_report["llm_provider"] == "rule_based"
             assert stored_report["reasoning"] == attribution_report["reasoning"]
     finally:
-        await _cleanup_match_records(user_id)
-        await close_pool()
+        await _cleanup_pool_resources(user_id, pool_created)
 
 
 @pytest.mark.anyio
 async def test_orchestrator_auth_validation_and_not_found_behaviour(service_token_header):
     missing_user_id = str(uuid.uuid4())
+    pool_created = False
     invalid_payload = {
         "user_id": str(uuid.uuid4()),
         "entity_type": "invalid-type",
@@ -457,6 +471,7 @@ async def test_orchestrator_auth_validation_and_not_found_behaviour(service_toke
     try:
         try:
             await _create_test_pool()
+            pool_created = True
         except Exception as exc:  # pragma: no cover - environment-dependent
             pytest.skip(f"Integration DB unavailable: {exc}")
 
@@ -519,7 +534,7 @@ async def test_orchestrator_auth_validation_and_not_found_behaviour(service_toke
             assert empty_body["data"]["total"] == 0
             assert empty_body["data"]["total_pages"] == 0
     finally:
-        await close_pool()
+        await _cleanup_pool_resources(None, pool_created)
 
 
 @pytest.mark.anyio
@@ -555,10 +570,12 @@ async def test_scholarship_output_baseline_uses_expected_score_and_rule_based_at
     match_repo = MatchResultRepository()
     history_repo = ScoringHistoryRepository()
     attribution_repo = AttributionReportRepository()
+    pool_created = False
 
     try:
         try:
             await _create_test_pool()
+            pool_created = True
         except Exception as exc:  # pragma: no cover - environment-dependent
             pytest.skip(f"Integration DB unavailable: {exc}")
 
@@ -621,8 +638,7 @@ async def test_scholarship_output_baseline_uses_expected_score_and_rule_based_at
             assert stored_report["llm_provider"] == "rule_based"
             assert stored_report["reasoning"] == attribution_report["reasoning"]
     finally:
-        await _cleanup_match_records(user_id)
-        await close_pool()
+        await _cleanup_pool_resources(user_id, pool_created)
 
 
 @pytest.mark.anyio
@@ -660,10 +676,12 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
     match_repo = MatchResultRepository()
     history_repo = ScoringHistoryRepository()
     attribution_repo = AttributionReportRepository()
+    pool_created = False
 
     try:
         try:
             await _create_test_pool()
+            pool_created = True
         except Exception as exc:  # pragma: no cover - environment-dependent
             pytest.skip(f"Integration DB unavailable: {exc}")
 
@@ -705,8 +723,7 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
             assert "Weak research alignment" in stored_report["reasoning"]
             assert attribution_report["reasoning"] == stored_report["reasoning"]
     finally:
-        await _cleanup_match_records(user_id)
-        await close_pool()
+        await _cleanup_pool_resources(user_id, pool_created)
 
 
 @pytest.mark.anyio
@@ -729,6 +746,7 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
     high_program_entity_id = str(uuid.uuid4())
     low_program_entity_id = str(uuid.uuid4())
     scholarship_entity_id = str(uuid.uuid4())
+    pool_created = False
 
     high_program_payload = _program_payload(user_id, high_program_entity_id, include_attribution=False)
     high_program_payload["user_profile"]["research_interests"] = "high-fit research"
@@ -762,6 +780,7 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
     try:
         try:
             await _create_test_pool()
+            pool_created = True
         except Exception as exc:  # pragma: no cover - environment-dependent
             pytest.skip(f"Integration DB unavailable: {exc}")
 
@@ -846,5 +865,4 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
                 float(scholarship_match["match_score"])
             )
     finally:
-        await _cleanup_match_records(user_id)
-        await close_pool()
+        await _cleanup_pool_resources(user_id, pool_created)
