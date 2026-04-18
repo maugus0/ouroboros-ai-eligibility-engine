@@ -95,6 +95,7 @@ app.add_middleware(LoggingMiddleware)
 app.include_router(health.router)
 app.include_router(matching.router)
 app.include_router(attribution.router)
+app.include_router(attribution.internal_router)
 
 
 # -- Custom OpenAPI ----------------------------------------------------
