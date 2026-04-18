@@ -98,6 +98,7 @@ class MatchingService:
                 entity_data=entity_data,
                 score_breakdown=breakdown,
                 match_score=total_score,
+                score_metadata=metadata,
             )
             result["attribution_report"] = attribution
             if attribution and attribution.get("llm_model") and not match_result.get("llm_model_used"):
@@ -118,6 +119,41 @@ class MatchingService:
         )
 
         return result
+
+    async def evaluate_batch(
+        self,
+        user_id: str,
+        user_profile: dict[str, Any],
+        evaluations: list[dict[str, Any]],
+        include_attribution: bool = True,
+    ) -> dict[str, Any]:
+        """Evaluate multiple entities for the same user profile."""
+        results: list[dict[str, Any]] = []
+
+        for evaluation in evaluations:
+            item_include_attribution = evaluation.get("include_attribution")
+            result = await self.evaluate(
+                user_id=user_id,
+                entity_type=str(evaluation["entity_type"]),
+                entity_id=evaluation["entity_id"],
+                user_profile=user_profile,
+                entity_data=evaluation["entity_data"],
+                include_attribution=(
+                    item_include_attribution if item_include_attribution is not None else include_attribution
+                ),
+            )
+            results.append(
+                {
+                    "entity_type": str(evaluation["entity_type"]),
+                    "entity_id": evaluation["entity_id"],
+                    **result,
+                }
+            )
+
+        return {
+            "count": len(results),
+            "results": results,
+        }
 
     async def get_results_by_user(
         self,

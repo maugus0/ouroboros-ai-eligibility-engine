@@ -42,6 +42,40 @@ class EvaluateRequest(BaseModel):
     )
 
 
+class BatchEvaluateItem(BaseModel):
+    """One entity to evaluate inside a batch request."""
+
+    entity_type: EntityType
+    entity_id: str
+    entity_data: dict[str, Any] = Field(
+        ...,
+        description="Program or scholarship requirements and details",
+    )
+    include_attribution: Optional[bool] = Field(
+        default=None,
+        description="Optional per-item override for attribution generation",
+    )
+
+
+class BatchEvaluateRequest(BaseModel):
+    """Request body for batch evaluation across multiple entities."""
+
+    user_id: str
+    user_profile: dict[str, Any] = Field(
+        ...,
+        description="Student profile data shared across all evaluations in the batch",
+    )
+    evaluations: list[BatchEvaluateItem] = Field(
+        ...,
+        min_length=1,
+        description="Entities to evaluate for the same user profile",
+    )
+    include_attribution: bool = Field(
+        default=True,
+        description="Default attribution behavior applied when an item does not override it",
+    )
+
+
 class ScoreBreakdown(BaseModel):
     """Detailed breakdown of how the match score was computed."""
 

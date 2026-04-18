@@ -6,15 +6,19 @@ from fastapi import APIRouter, Depends, Query
 
 from app.middleware.service_auth import require_service_token
 from app.models.common_models import StandardResponse
-from app.models.matching_models import EvaluateRequest
+from app.models.matching_models import BatchEvaluateRequest, EvaluateRequest
 from app.services.matching_service import MatchingService
 
 router = APIRouter(prefix="/matching", tags=["Matching"], dependencies=[Depends(require_service_token)])
+internal_router = APIRouter(
+    prefix="/api/v1/eligibility",
+    tags=["Matching"],
+    dependencies=[Depends(require_service_token)],
+)
 
 
-@router.post("/evaluate")
-async def evaluate_match(request: EvaluateRequest):
-    """Evaluate a student-program or student-scholarship match."""
+async def _handle_evaluate(request: EvaluateRequest):
+    """Evaluate a single student-entity match."""
     service = MatchingService()
     result = await service.evaluate(
         user_id=request.user_id,
@@ -25,6 +29,50 @@ async def evaluate_match(request: EvaluateRequest):
         include_attribution=request.include_attribution,
     )
     return StandardResponse(success=True, message="Evaluation complete", data=result)
+
+
+async def _handle_evaluate_batch(request: BatchEvaluateRequest):
+    """Evaluate multiple matches for the same student profile."""
+    service = MatchingService()
+    result = await service.evaluate_batch(
+        user_id=request.user_id,
+        user_profile=request.user_profile,
+        evaluations=[
+            {
+                "entity_type": item.entity_type.value,
+                "entity_id": item.entity_id,
+                "entity_data": item.entity_data,
+                "include_attribution": item.include_attribution,
+            }
+            for item in request.evaluations
+        ],
+        include_attribution=request.include_attribution,
+    )
+    return StandardResponse(success=True, message="Batch evaluation complete", data=result)
+
+
+@router.post("/evaluate")
+async def evaluate_match(request: EvaluateRequest):
+    """Evaluate a student-program or student-scholarship match."""
+    return await _handle_evaluate(request)
+
+
+@router.post("/evaluate/batch")
+async def evaluate_match_batch(request: BatchEvaluateRequest):
+    """Evaluate multiple matches for the same student profile."""
+    return await _handle_evaluate_batch(request)
+
+
+@internal_router.post("/evaluate", include_in_schema=False)
+async def evaluate_internal_match(request: EvaluateRequest):
+    """Internal orchestrator-facing alias for single evaluation."""
+    return await _handle_evaluate(request)
+
+
+@internal_router.post("/evaluate/batch", include_in_schema=False)
+async def evaluate_internal_match_batch(request: BatchEvaluateRequest):
+    """Internal orchestrator-facing alias for batched evaluation."""
+    return await _handle_evaluate_batch(request)
 
 
 @router.get("/results/{user_id}")
