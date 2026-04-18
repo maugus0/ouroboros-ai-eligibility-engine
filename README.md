@@ -530,7 +530,7 @@ tests/
 | **Security Audit**   | Bandit + Trivy + optional Snyk                  |
 | **Docker Build**     | Verify image builds on PRs                      |
 | **GHCR Push**        | Build and push image to GHCR on merge to `main` |
-| **Summary**          | Markdown table of all job results               |
+| **Summary**          | Bullet-list job summary written to Actions UI and uploaded as an artifact |
 
 ***
 

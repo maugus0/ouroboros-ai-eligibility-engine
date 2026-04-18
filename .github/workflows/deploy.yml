@@ -33,8 +33,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
-  security-events: write
 
 env:
   PYTHON_VERSION: "3.11"
@@ -210,6 +208,9 @@ jobs:
     name: Security Scan (Bandit)
     runs-on: ubuntu-latest
     needs: [format, lint, unit-tests]
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -335,7 +336,6 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -430,7 +430,7 @@ jobs:
             echo "- Trivy: ${{ needs.trivy-scan.result }}";
             echo "";
             echo "_Trivy runs on push to main only; on PRs the Trivy job is skipped._";
-          } > summary.md
+          } | tee summary.md "$GITHUB_STEP_SUMMARY" > /dev/null
 
       - name: Upload consolidated report bundle
         uses: actions/upload-artifact@v6
