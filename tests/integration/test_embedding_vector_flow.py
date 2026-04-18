@@ -1,5 +1,7 @@
 """Integration tests for the real pgvector-backed embedding flow."""
 
+# pylint: disable=too-many-locals,broad-exception-caught
+
 import uuid
 
 import pytest
@@ -65,7 +67,7 @@ async def test_embedding_service_stores_and_queries_real_pgvector(monkeypatch):
         "NLP for multilingual assistants": _vector(1.0, 0.0, 0.0),
     }
 
-    async def fake_generate_embedding(self, text: str) -> list[float]:
+    async def fake_generate_embedding(_self, text: str) -> list[float]:
         return vectors_by_text[text]
 
     monkeypatch.setattr(EmbeddingService, "generate_embedding", fake_generate_embedding)

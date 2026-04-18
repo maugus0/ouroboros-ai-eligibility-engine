@@ -162,7 +162,9 @@ class MatchingService:
             }
 
         try:
-            llm_result = await self.llm_service.assess_research_alignment(user_profile=user_profile, entity_data=program)
+            llm_result = await self.llm_service.assess_research_alignment(
+                user_profile=user_profile, entity_data=program
+            )
             llm_result.setdefault("similarity", llm_result.get("score", 0.0) / 100.0)
             return llm_result
         except Exception as exc:  # pylint: disable=broad-exception-caught

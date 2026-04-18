@@ -1,5 +1,7 @@
 """Integration tests for the matching -> persistence -> attribution flow."""
 
+# pylint: disable=too-many-locals,too-many-statements,broad-exception-caught
+
 import uuid
 
 import pytest
@@ -426,7 +428,9 @@ async def test_program_output_baseline_uses_expected_score_and_rule_based_attrib
             stored_history = await history_repo.get_by_match_id(match_id)
             assert len(stored_history) == 1
             assert float(stored_history[0]["computed_score"]) == pytest.approx(expected_score)
-            assert stored_history[0]["scoring_params"]["metadata"]["research_alignment"]["similarity"] == pytest.approx(0.8)
+            assert stored_history[0]["scoring_params"]["metadata"]["research_alignment"]["similarity"] == pytest.approx(
+                0.8
+            )
             assert stored_history[0]["scoring_params"]["metadata"]["research_alignment"]["provider"] == "openai"
 
             stored_report = await attribution_repo.get_by_match_id(match_id)
@@ -690,7 +694,9 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
 
             stored_history = await history_repo.get_by_match_id(match_id)
             assert len(stored_history) == 1
-            assert stored_history[0]["scoring_params"]["metadata"]["research_alignment"]["similarity"] == pytest.approx(0.0)
+            assert stored_history[0]["scoring_params"]["metadata"]["research_alignment"]["similarity"] == pytest.approx(
+                0.0
+            )
             assert stored_history[0]["scoring_params"]["metadata"]["research_alignment"]["provider"] == "unavailable"
 
             stored_report = await attribution_repo.get_by_match_id(match_id)

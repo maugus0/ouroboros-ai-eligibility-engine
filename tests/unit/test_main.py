@@ -53,7 +53,10 @@ def test_health_endpoint_reports_connected_when_query_succeeds(monkeypatch):
         def acquire(self):
             return FakeAcquireContext()
 
-    monkeypatch.setattr(health_api, "get_pool", lambda: FakePool())
+    def get_fake_pool():
+        return FakePool()
+
+    monkeypatch.setattr(health_api, "get_pool", get_fake_pool)
 
     response = client.get("/health")
 

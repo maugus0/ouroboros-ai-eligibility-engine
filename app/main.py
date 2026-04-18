@@ -1,5 +1,6 @@
 """FastAPI application entry point for the Eligibility Engine."""
 
+import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -119,4 +120,9 @@ app.openapi = custom_openapi  # type: ignore[method-assign]
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8004, reload=True)
+    uvicorn.run(
+        app,
+        host=os.getenv("APP_HOST", "127.0.0.1"),
+        port=int(os.getenv("APP_PORT", "8004")),
+        reload=os.getenv("APP_RELOAD", "true").lower() == "true",
+    )
