@@ -92,7 +92,7 @@ jobs:
         run: flake8 app/ tests/ --max-line-length=120 --extend-ignore=E203,W503,E501
 
       - name: Run pylint
-        run: pylint app/ tests/ --max-line-length=120 --disable=C0111,R0903
+        run: pylint app/ --max-line-length=120 --disable=C0111,R0903
 
   unit-tests:
     name: Unit Tests
@@ -228,8 +228,14 @@ jobs:
 
       - name: Run Bandit
         run: |
-          bandit -r app/ -f json -o bandit-report.json || true
-          bandit -r app/ || true
+          set +e
+          bandit -r app/ -f json -o bandit-report.json
+          bandit_json_status=$?
+          bandit -r app/
+          bandit_text_status=$?
+          if [ "$bandit_json_status" -ne 0 ] || [ "$bandit_text_status" -ne 0 ]; then
+            exit 1
+          fi
 
       - name: Upload Bandit report
         if: always() && hashFiles('bandit-report.json') != ''

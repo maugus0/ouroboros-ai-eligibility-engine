@@ -1,5 +1,6 @@
 """FastAPI application entry point for the Eligibility Engine."""
 
+import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -27,12 +28,19 @@ async def lifespan(_application: FastAPI):
 
     if not settings.ALLOW_DB_FAILURE:
         try:
+            db_host = settings.get_db_host()
+            db_port = settings.get_db_port()
+            db_name = settings.get_db_name()
+            db_user = settings.get_db_user()
+
+            logger.info("database_connection_attempt", host=db_host, port=db_port, database=db_name, user=db_user)
+
             await create_pool(
                 DatabasePoolConfig(
-                    host=settings.get_db_host(),
-                    port=settings.get_db_port(),
-                    database=settings.get_db_name(),
-                    user=settings.get_db_user(),
+                    host=db_host,
+                    port=db_port,
+                    database=db_name,
+                    user=db_user,
                     password=settings.get_db_password(),
                     min_size=settings.DB_POOL_MIN_SIZE,
                     max_size=settings.DB_POOL_MAX_SIZE,
@@ -119,4 +127,9 @@ app.openapi = custom_openapi  # type: ignore[method-assign]
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8004, reload=True)
+    uvicorn.run(
+        app,
+        host=os.getenv("APP_HOST", "127.0.0.1"),
+        port=int(os.getenv("APP_PORT", "8004")),
+        reload=os.getenv("APP_RELOAD", "true").lower() == "true",
+    )
