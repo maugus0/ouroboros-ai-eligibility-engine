@@ -144,23 +144,28 @@ async def test_orchestrator_request_persists_match_and_exposes_attribution_repor
         _ = (user_profile, entity_data)
         return _research_alignment_result(88.0, model="gpt-research-openai")
 
-    async def fake_generate_reasoning(
+    async def fake_generate_attribution(
         _self,
+        match_id,
         user_profile,
         entity_data,
         score_breakdown,
-        strengths,
-        gaps,
+        match_score,
     ):
-        _ = (user_profile, entity_data, score_breakdown, strengths, gaps)
+        _ = (match_id, user_profile, entity_data, score_breakdown, match_score)
         return {
-            "content": "Mock reasoning for integration flow.",
+            "reasoning": "Mock reasoning for integration flow.",
+            "strengths": ["Strong overall alignment"],
+            "gaps": [],
+            "recommendations": [],
+            "confidence": "high",
+            "provider": "openai",
             "model": "mock-openai-model",
             "fallback_used": False,
         }
 
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
-    monkeypatch.setattr(LLMPipelineService, "generate_reasoning", fake_generate_reasoning)
+    monkeypatch.setattr(LLMPipelineService, "generate_attribution", fake_generate_attribution)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -334,19 +339,19 @@ async def test_program_output_baseline_uses_expected_score_and_rule_based_attrib
         _ = (user_profile, entity_data)
         return _research_alignment_result(80.0)
 
-    async def fail_generate_reasoning(
+    async def fail_generate_attribution(
         _self,
+        match_id,
         user_profile,
         entity_data,
         score_breakdown,
-        strengths,
-        gaps,
+        match_score,
     ):
-        _ = (user_profile, entity_data, score_breakdown, strengths, gaps)
+        _ = (match_id, user_profile, entity_data, score_breakdown, match_score)
         raise RuntimeError("LLM unavailable for baseline verification")
 
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
-    monkeypatch.setattr(LLMPipelineService, "generate_reasoning", fail_generate_reasoning)
+    monkeypatch.setattr(LLMPipelineService, "generate_attribution", fail_generate_attribution)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -542,18 +547,18 @@ async def test_scholarship_output_baseline_uses_expected_score_and_rule_based_at
     service_token_header,
     monkeypatch,
 ):
-    async def fail_generate_reasoning(
+    async def fail_generate_attribution(
         _self,
+        match_id,
         user_profile,
         entity_data,
         score_breakdown,
-        strengths,
-        gaps,
+        match_score,
     ):
-        _ = (user_profile, entity_data, score_breakdown, strengths, gaps)
+        _ = (match_id, user_profile, entity_data, score_breakdown, match_score)
         raise RuntimeError("LLM unavailable for scholarship baseline verification")
 
-    monkeypatch.setattr(LLMPipelineService, "generate_reasoning", fail_generate_reasoning)
+    monkeypatch.setattr(LLMPipelineService, "generate_attribution", fail_generate_attribution)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -654,20 +659,20 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
         _ = (query_text, top_k, similarity_threshold)
         raise RuntimeError("pgvector lookup failed")
 
-    async def fail_generate_reasoning(
+    async def fail_generate_attribution(
         _self,
+        match_id,
         user_profile,
         entity_data,
         score_breakdown,
-        strengths,
-        gaps,
+        match_score,
     ):
-        _ = (user_profile, entity_data, score_breakdown, strengths, gaps)
+        _ = (match_id, user_profile, entity_data, score_breakdown, match_score)
         raise RuntimeError("LLM unavailable for degradation verification")
 
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", failing_assess_research_alignment)
     monkeypatch.setattr(EmbeddingService, "search_similar", failing_search_similar)
-    monkeypatch.setattr(LLMPipelineService, "generate_reasoning", fail_generate_reasoning)
+    monkeypatch.setattr(LLMPipelineService, "generate_attribution", fail_generate_attribution)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())

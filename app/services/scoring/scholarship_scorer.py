@@ -70,7 +70,7 @@ class ScholarshipScorer:
         return total_score, breakdown, metadata
 
     @staticmethod
-    def _score_eligibility(  # pylint: disable=too-many-branches
+    def _score_eligibility(  # pylint: disable=too-many-branches,too-many-locals
         user_profile: dict,
         scholarship: dict,
     ) -> tuple[float, dict]:
