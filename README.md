@@ -516,23 +516,31 @@ tests/
 
 **Workflow**: `.github/workflows/deploy.yml` (GitHub Actions name: **OuroborosAI Eligibility Engine CI/CD Pipeline**)
 
-**Trigger**: Pull requests to `main` or `develop`, and pushes to `main`
+**Triggers**:
+- Pull requests to `main` or `develop`
+- Pushes to `main` for image publish + post-push image scanning
 
 ### Pipeline Stages
 
-| Stage                | Description                                     |
-| -------------------- | ----------------------------------------------- |
-| **Format**           | Black + isort validation                        |
-| **Lint**             | flake8 + pylint (both blocking)                 |
-| **Unit Tests**       | `pytest tests/unit/` with JUnit XML artifact    |
-| **Type Check**       | mypy — blocking (after format + lint)           |
-| **Tests + Coverage** | Full `pytest tests/` with HTML + Cobertura XML  |
-| **Security Audit**   | Bandit + Trivy + optional Snyk                  |
-| **Docker Build**     | Verify image builds on PRs                      |
-| **GHCR Push**        | Build and push image to GHCR on merge to `main` |
-| **Summary**          | Bullet-list job summary written to Actions UI and uploaded as an artifact |
+| Stage | Description |
+|-------|-------------|
+| **Format** | Black + isort validation |
+| **Lint** | flake8 + pylint (both blocking) |
+| **Unit Tests** | `pytest tests/unit/` with JUnit XML artifact |
+| **Type Check** | mypy — blocking (after format + lint) |
+| **Tests + Coverage** | Full `pytest tests/` with HTML + Cobertura XML |
+| **Security Audit** | Bandit blocking scan + Snyk OSS scan artifact |
+| **Docker Build** | PRs build locally; `main` pushes image to GHCR |
+| **Trivy Scan** | `main` only container image scan against pushed GHCR image |
+| **Summary** | Markdown table of all job results |
 
-***
+### Security Scan Policy
+
+- `Bandit` runs as a blocking static security check.
+- `Snyk` OSS scanning runs when `SNYK_TOKEN` is configured and uploads SARIF/artifacts.
+- `Trivy` runs on `main` after the image is pushed to GHCR and scans the published container image.
+
+---
 
 ## Deployment
 
