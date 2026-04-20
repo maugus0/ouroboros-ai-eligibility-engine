@@ -2,9 +2,9 @@
 
 Microservice for the **Ouroboros AI** scholarship discovery platform. The Eligibility Engine computes rule-based + LLM-assisted match scores for programs and scholarships, generates explainable attribution reports, and leverages PostgreSQL + pgvector for semantic research alignment matching. Raw SQL with `asyncpg` and the repository pattern (NO SQLAlchemy).
 
-**Repository:** https://github.com/maugus0/ouroboros-ai-eligibility-engine
+**Repository:** <https://github.com/maugus0/ouroboros-ai-eligibility-engine>
 
----
+***
 
 ## Table of Contents
 
@@ -16,6 +16,7 @@ Microservice for the **Ouroboros AI** scholarship discovery platform. The Eligib
 - [Configuration](#configuration)
 - [Database Schema](#database-schema)
 - [API Endpoints](#api-endpoints)
+- [Integration Contract](#integration-contract)
 - [Scoring System](#scoring-system)
 - [Prompt System](#prompt-system)
 - [Development Workflow](#development-workflow)
@@ -26,7 +27,7 @@ Microservice for the **Ouroboros AI** scholarship discovery platform. The Eligib
 - [Troubleshooting](#troubleshooting)
 - [Attribution](#attribution)
 
----
+***
 
 ## Overview
 
@@ -48,7 +49,7 @@ The Eligibility Engine is a critical microservice in the Ouroboros AI platform t
 - LLM resilience — OpenAI primary, Anthropic fallback with retry logic
 - JSON prompt templates — version-controlled in `prompts/` with runtime context injection
 
----
+***
 
 ## Architecture
 
@@ -98,7 +99,7 @@ The Eligibility Engine is a critical microservice in the Ouroboros AI platform t
       └─────────────────┘
 ```
 
----
+***
 
 ## Features
 
@@ -130,19 +131,19 @@ The Eligibility Engine is a critical microservice in the Ouroboros AI platform t
 - Cosine similarity search with IVFFlat indexing
 - Configurable top-k and similarity threshold
 
----
+***
 
 ## Prerequisites
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| Python | 3.11+ | Runtime |
-| PostgreSQL | 16+ | Database (with pgvector extension) |
-| OpenAI API Key | — | Primary LLM + embeddings provider |
-| Anthropic API Key | — | Fallback LLM provider (optional but recommended) |
-| Docker | 24.0+ | Containerised deployment (optional) |
+| Tool              | Version | Purpose                                          |
+| ----------------- | ------- | ------------------------------------------------ |
+| Python            | 3.11+   | Runtime                                          |
+| PostgreSQL        | 16+     | Database (with pgvector extension)               |
+| OpenAI API Key    | —       | Primary LLM + embeddings provider                |
+| Anthropic API Key | —       | Fallback LLM provider (optional but recommended) |
+| Docker            | 24.0+   | Containerised deployment (optional)              |
 
----
+***
 
 ## Quick Start
 
@@ -226,72 +227,75 @@ curl http://localhost:8004/health
 
 Swagger docs are available at `http://localhost:8004/docs`.
 
----
+***
 
 ## Configuration
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| **Database** ||||
-| `DB_HOST` | No | `localhost` | PostgreSQL host |
-| `DB_PORT` | No | `5432` | PostgreSQL port |
-| `DB_NAME` | No | `ouroboros_eligibility_db` | Database name |
-| `DB_USERNAME` | No | `postgres` | PostgreSQL user |
-| `DB_PASSWORD` | Yes | — | PostgreSQL password |
-| `DB_POOL_MIN_SIZE` | No | `5` | Min connections in pool |
-| `DB_POOL_MAX_SIZE` | No | `20` | Max connections in pool |
-| **Service Auth** ||||
-| `X_SERVICE_TOKEN` | Yes | — | Inter-service auth token (shared with orchestrator) |
-| **LLM — OpenAI** ||||
-| `OPENAI_API_KEY` | Yes | — | OpenAI API key |
-| `OPENAI_MODEL` | No | `gpt-4o-mini` | Chat model identifier |
-| `OPENAI_EMBEDDING_MODEL` | No | `text-embedding-3-small` | Embedding model |
-| `OPENAI_MAX_TOKENS` | No | `1500` | Max output tokens |
-| `OPENAI_TEMPERATURE` | No | `0.1` | Sampling temperature |
-| **LLM — Anthropic** ||||
-| `ANTHROPIC_API_KEY` | Recommended | — | Anthropic API key (fallback) |
-| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-20250514` | Model identifier |
-| `ANTHROPIC_MAX_TOKENS` | No | `1500` | Max output tokens |
-| **Scoring** ||||
-| `PROGRAM_WEIGHT_GPA` | No | `20` | GPA weight (sum must = 100) |
-| `PROGRAM_WEIGHT_RELEVANCE` | No | `30` | Relevance weight |
-| `PROGRAM_WEIGHT_PREREQUISITES` | No | `25` | Prerequisites weight |
-| `PROGRAM_WEIGHT_RESEARCH` | No | `15` | Research alignment weight |
-| `PROGRAM_WEIGHT_PRACTICAL` | No | `10` | Practical factors weight |
-| `SCHOLARSHIP_WEIGHT_ELIGIBILITY` | No | `40` | Eligibility weight |
-| `SCHOLARSHIP_WEIGHT_PREFERRED` | No | `30` | Preferred criteria weight |
-| `SCHOLARSHIP_WEIGHT_FUNDING` | No | `20` | Funding coverage weight |
-| `SCHOLARSHIP_WEIGHT_COMPETITION` | No | `10` | Competition estimate weight |
-| `MATCH_SCORE_THRESHOLD` | No | `50.0` | Minimum viable match |
-| `HIGH_CONFIDENCE_THRESHOLD` | No | `75.0` | High confidence threshold |
-| **Vector Search** ||||
-| `EMBEDDING_DIMENSION` | No | `1536` | Embedding vector dimension |
-| `VECTOR_SIMILARITY_TOP_K` | No | `5` | Max similar results |
-| `VECTOR_SIMILARITY_THRESHOLD` | No | `0.7` | Minimum cosine similarity |
-| **Application** ||||
-| `LOG_LEVEL` | No | `INFO` | `DEBUG\|INFO\|WARNING\|ERROR\|CRITICAL` |
-| `USE_MOCK_DATA` | No | `false` | Use in-memory repos (tests only) |
-| `ALLOW_DB_FAILURE` | No | `false` | Continue if DB unavailable (tests only) |
+| Variable                         | Required    | Default                    | Description                                         |
+| -------------------------------- | ----------- | -------------------------- | --------------------------------------------------- |
+| **Database**                     | <br />      | <br />                     | <br />                                              |
+| `DB_HOST`                        | No          | `localhost`                | PostgreSQL host                                     |
+| `DB_PORT`                        | No          | `5432`                     | PostgreSQL port                                     |
+| `DB_NAME`                        | No          | `ouroboros_eligibility_db` | Database name                                       |
+| `DB_USERNAME`                    | No          | `postgres`                 | PostgreSQL user                                     |
+| `DB_PASSWORD`                    | Yes         | —                          | PostgreSQL password                                 |
+| `DB_POOL_MIN_SIZE`               | No          | `5`                        | Min connections in pool                             |
+| `DB_POOL_MAX_SIZE`               | No          | `20`                       | Max connections in pool                             |
+| **Service Auth**                 | <br />      | <br />                     | <br />                                              |
+| `X_SERVICE_TOKEN`                | Yes         | —                          | Inter-service auth token (shared with orchestrator) |
+| **LLM — OpenAI**                 | <br />      | <br />                     | <br />                                              |
+| `OPENAI_API_KEY`                 | Yes         | —                          | OpenAI API key                                      |
+| `OPENAI_MODEL`                   | No          | `gpt-4o-mini`              | Chat model identifier                               |
+| `OPENAI_EMBEDDING_MODEL`         | No          | `text-embedding-3-small`   | Embedding model                                     |
+| `OPENAI_MAX_TOKENS`              | No          | `1500`                     | Max output tokens                                   |
+| `OPENAI_TEMPERATURE`             | No          | `0.1`                      | Sampling temperature                                |
+| **LLM — Anthropic**              | <br />      | <br />                     | <br />                                              |
+| `ANTHROPIC_API_KEY`              | Recommended | —                          | Anthropic API key (fallback)                        |
+| `ANTHROPIC_MODEL`                | No          | `claude-sonnet-4-20250514` | Model identifier                                    |
+| `ANTHROPIC_MAX_TOKENS`           | No          | `1500`                     | Max output tokens                                   |
+| **Scoring**                      | <br />      | <br />                     | <br />                                              |
+| `PROGRAM_WEIGHT_GPA`             | No          | `20`                       | GPA weight (sum must = 100)                         |
+| `PROGRAM_WEIGHT_RELEVANCE`       | No          | `30`                       | Relevance weight                                    |
+| `PROGRAM_WEIGHT_PREREQUISITES`   | No          | `25`                       | Prerequisites weight                                |
+| `PROGRAM_WEIGHT_RESEARCH`        | No          | `15`                       | Research alignment weight                           |
+| `PROGRAM_WEIGHT_PRACTICAL`       | No          | `10`                       | Practical factors weight                            |
+| `SCHOLARSHIP_WEIGHT_ELIGIBILITY` | No          | `40`                       | Eligibility weight                                  |
+| `SCHOLARSHIP_WEIGHT_PREFERRED`   | No          | `30`                       | Preferred criteria weight                           |
+| `SCHOLARSHIP_WEIGHT_FUNDING`     | No          | `20`                       | Funding coverage weight                             |
+| `SCHOLARSHIP_WEIGHT_COMPETITION` | No          | `10`                       | Competition estimate weight                         |
+| `MATCH_SCORE_THRESHOLD`          | No          | `50.0`                     | Minimum viable match                                |
+| `HIGH_CONFIDENCE_THRESHOLD`      | No          | `75.0`                     | High confidence threshold                           |
+| **Vector Search**                | <br />      | <br />                     | <br />                                              |
+| `EMBEDDING_DIMENSION`            | No          | `1536`                     | Embedding vector dimension                          |
+| `VECTOR_SIMILARITY_TOP_K`        | No          | `5`                        | Max similar results                                 |
+| `VECTOR_SIMILARITY_THRESHOLD`    | No          | `0.7`                      | Minimum cosine similarity                           |
+| **Application**                  | <br />      | <br />                     | <br />                                              |
+| `APP_HOST`                       | No          | `127.0.0.1`                | Application bind host                               |
+| `APP_PORT`                       | No          | `8004`                     | Application bind port                               |
+| `APP_RELOAD`                     | No          | `true`                     | Enable auto-reload in development                   |
+| `LOG_LEVEL`                      | No          | `INFO`                     | `DEBUG\|INFO\|WARNING\|ERROR\|CRITICAL`             |
+| `USE_MOCK_DATA`                  | No          | `false`                    | Use in-memory repos (tests only)                    |
+| `ALLOW_DB_FAILURE`               | No          | `false`                    | Continue if DB unavailable (tests only)             |
 
 ### Docker / CI Prefix Compatibility
 
 The service also reads `POSTGRES_*` variables for Docker/CI environments. Resolution logic lives in the `settings.get_db_*()` helpers in `app/config.py`.
 
----
+***
 
 ## Database Schema
 
 ### Tables
 
-| Table | Purpose |
-|-------|---------|
-| `match_results` | Program and scholarship match scores with JSONB breakdown |
+| Table                 | Purpose                                                           |
+| --------------------- | ----------------------------------------------------------------- |
+| `match_results`       | Program and scholarship match scores with JSONB breakdown         |
 | `attribution_reports` | Explainability data (strengths, gaps, reasoning, recommendations) |
-| `scoring_history` | Audit trail for all scoring operations |
-| `research_embeddings` | Vector storage for semantic research alignment (pgvector) |
-| `llm_call_logs` | Audit trail for all LLM API calls |
+| `scoring_history`     | Audit trail for all scoring operations                            |
+| `research_embeddings` | Vector storage for semantic research alignment (pgvector)         |
+| `llm_call_logs`       | Audit trail for all LLM API calls                                 |
 
 ### Migrations
 
@@ -307,7 +311,7 @@ migrations/
 └── 006_create_llm_call_logs.sql
 ```
 
----
+***
 
 ## API Endpoints
 
@@ -317,57 +321,118 @@ All endpoints (except health) require the `X-Service-Token` header.
 
 ### Health
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/` | No | Root health check |
-| GET | `/health` | No | Detailed health status |
+| Method | Path      | Auth | Description            |
+| ------ | --------- | ---- | ---------------------- |
+| GET    | `/`       | No   | Root health check      |
+| GET    | `/health` | No   | Detailed health status |
 
 ### Matching
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/matching/evaluate` | Evaluate a student-program or student-scholarship match |
-| GET | `/matching/results/{user_id}` | Get paginated match results for a user |
-| GET | `/matching/results/detail/{match_id}` | Get a single match result by ID |
+| Method | Path                                  | Description                                             |
+| ------ | ------------------------------------- | ------------------------------------------------------- |
+| POST   | `/matching/evaluate`                  | Evaluate a student-program or student-scholarship match |
+| GET    | `/matching/results/{user_id}`         | Get paginated match results for a user                  |
+| GET    | `/matching/results/detail/{match_id}` | Get a single match result by ID                         |
 
 ### Attribution
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/attribution/report/{match_id}` | Get the attribution report for a match |
+| Method | Path                             | Description                            |
+| ------ | -------------------------------- | -------------------------------------- |
+| GET    | `/attribution/report/{match_id}` | Get the attribution report for a match |
 
----
+***
+
+## Integration Contract
+
+The Eligibility Engine is designed to be called only by the orchestrator or other trusted backend services.
+
+### Authentication
+
+- All non-health endpoints require `X-Service-Token`
+- The value must match the shared secret configured in both the orchestrator and the eligibility-engine
+- Frontend clients must not call this service directly
+
+### Caller Requirements
+
+- `user_id` must be a UUID string because result persistence uses PostgreSQL UUID columns
+- `entity_type` must be either `program` or `scholarship`
+- `entity_data.entity_type` should match the top-level `entity_type`
+- `include_attribution=false` is supported for fast result-only flows
+
+### Required Proxy Behaviour
+
+When the orchestrator proxies requests into this service it should:
+
+- inject the authenticated user ID as `user_id`
+- forward `X-Trace-ID` for log correlation
+- map downstream availability errors to orchestrator-facing `502/504`
+- keep `success/message/data` response semantics intact
+
+### Suggested Smoke Validation
+
+```bash
+curl http://localhost:8004/health
+
+curl -X POST http://localhost:8004/matching/evaluate \
+  -H "Content-Type: application/json" \
+  -H "X-Service-Token: $X_SERVICE_TOKEN" \
+  -d '{
+    "user_id": "11111111-1111-1111-1111-111111111111",
+    "entity_type": "program",
+    "entity_id": "program-demo-1",
+    "user_profile": {
+      "gpa_normalized": 3.8,
+      "major": "Computer Science",
+      "technical_skills": ["Python", "Machine Learning", "AI"],
+      "completed_courses": ["Algorithms", "Machine Learning"],
+      "research_interests": "Natural language processing and multilingual AI systems",
+      "preferred_locations": ["Sydney"],
+      "budget_usd": 40000
+    },
+    "entity_data": {
+      "entity_type": "program",
+      "minimum_gpa": 3.5,
+      "keywords": ["Machine Learning", "AI", "NLP"],
+      "prerequisites": ["Algorithms", "Machine Learning"],
+      "location": "Sydney",
+      "tuition_usd": 35000
+    },
+    "include_attribution": false
+  }'
+```
+
+***
 
 ## Scoring System
 
 ### Program Scoring Weights (configurable, must sum to 100)
 
-| Component | Weight | Method |
-|-----------|--------|--------|
-| GPA | 20% | Proportional scoring against minimum requirement |
-| Relevance | 30% | Keyword overlap (skills vs program keywords) |
-| Prerequisites | 25% | Course completion ratio |
-| Research Alignment | 15% | Cosine similarity via pgvector |
-| Practical Factors | 10% | Location preference + budget affordability |
+| Component          | Weight | Method                                           |
+| ------------------ | ------ | ------------------------------------------------ |
+| GPA                | 20%    | Proportional scoring against minimum requirement |
+| Relevance          | 30%    | Keyword overlap (skills vs program keywords)     |
+| Prerequisites      | 25%    | Course completion ratio                          |
+| Research Alignment | 15%    | Cosine similarity via pgvector                   |
+| Practical Factors  | 10%    | Location preference + budget affordability       |
 
 ### Scholarship Scoring Weights (configurable, must sum to 100)
 
-| Component | Weight | Method |
-|-----------|--------|--------|
-| Eligibility | 40% | Binary pass/fail per hard criterion |
-| Preferred Criteria | 30% | Activity/achievement overlap |
-| Funding Coverage | 20% | Award amount / financial need ratio |
-| Competition Estimate | 10% | Acceptance rate or applicant pool heuristic |
+| Component            | Weight | Method                                      |
+| -------------------- | ------ | ------------------------------------------- |
+| Eligibility          | 40%    | Binary pass/fail per hard criterion         |
+| Preferred Criteria   | 30%    | Activity/achievement overlap                |
+| Funding Coverage     | 20%    | Award amount / financial need ratio         |
+| Competition Estimate | 10%    | Acceptance rate or applicant pool heuristic |
 
 ### Confidence Levels
 
 | Score Range | Confidence |
-|-------------|------------|
-| 75+ | High |
-| 50-74.9 | Medium |
-| < 50 | Low |
+| ----------- | ---------- |
+| 75+         | High       |
+| 50-74.9     | Medium     |
+| < 50        | Low        |
 
----
+***
 
 ## Prompt System
 
@@ -375,12 +440,12 @@ Prompts are stored as **JSON templates** in `prompts/` and loaded at runtime wit
 
 ### Available Prompts
 
-| File | Purpose |
-|------|---------|
-| `program_reasoning_v1.json` | Program match reasoning narrative |
-| `scholarship_reasoning_v1.json` | Scholarship match reasoning narrative |
-| `attribution_report_v1.json` | Structured attribution report generation |
-| `research_alignment_v1.json` | Research interest alignment analysis |
+| File                            | Purpose                                  |
+| ------------------------------- | ---------------------------------------- |
+| `program_reasoning_v1.json`     | Program match reasoning narrative        |
+| `scholarship_reasoning_v1.json` | Scholarship match reasoning narrative    |
+| `attribution_report_v1.json`    | Structured attribution report generation |
+| `research_alignment_v1.json`    | Research interest alignment analysis     |
 
 ### Prompt Utilities
 
@@ -391,7 +456,7 @@ The `app/utils/prompt_utils.py` module provides:
 - `build_prompt_json(filename, context)` — full pipeline, returns JSON string
 - `build_prompt_text(filename, context)` — full pipeline, returns formatted text
 
----
+***
 
 ## Development Workflow
 
@@ -401,7 +466,7 @@ The `app/utils/prompt_utils.py` module provides:
 black app/ tests/
 isort app/ tests/
 flake8 app/ tests/ --max-line-length=120 --extend-ignore=E203,W503,E501
-pylint app/ tests/
+pylint app/
 mypy app/ --ignore-missing-imports --no-strict-optional
 ALLOW_DB_FAILURE=true X_SERVICE_TOKEN=test-service-token pytest tests/ -v
 ```
@@ -413,7 +478,7 @@ chmod +x pre-commit-check.sh
 ./pre-commit-check.sh
 ```
 
----
+***
 
 ## Testing
 
@@ -444,16 +509,18 @@ tests/
 │   ├── test_scholarship_scorer.py  # Scholarship scoring logic tests
 │   └── test_prompt_utils.py        # Prompt template loading & context merge
 └── integration/
-    └── (future E2E tests)
+    └── __init__.py
 ```
 
----
+***
 
 ## CI/CD Pipeline
 
 **Workflow**: `.github/workflows/deploy.yml` (GitHub Actions name: **OuroborosAI Eligibility Engine CI/CD Pipeline**)
 
-**Trigger**: Pull requests to `main` or `develop`
+**Triggers**:
+- Pull requests to `main` or `develop`
+- Pushes to `main` for image publish + post-push image scanning
 
 ### Pipeline Stages
 
@@ -464,9 +531,16 @@ tests/
 | **Unit Tests** | `pytest tests/unit/` with JUnit XML artifact |
 | **Type Check** | mypy — blocking (after format + lint) |
 | **Tests + Coverage** | Full `pytest tests/` with HTML + Cobertura XML |
-| **Security Audit** | Bandit (JSON artifact) |
-| **Docker Build** | Verify image builds — no push |
+| **Security Audit** | Bandit blocking scan + Snyk OSS scan artifact |
+| **Docker Build** | PRs build locally; `main` pushes image to GHCR |
+| **Trivy Scan** | `main` only container image scan against pushed GHCR image |
 | **Summary** | Markdown table of all job results |
+
+### Security Scan Policy
+
+- `Bandit` runs as a blocking static security check.
+- `Snyk` OSS scanning runs when `SNYK_TOKEN` is configured and uploads SARIF/artifacts.
+- `Trivy` runs on `main` after the image is pushed to GHCR and scans the published container image.
 
 ---
 
@@ -494,7 +568,7 @@ docker run -p 8004:8004 \
   eligibility-engine
 ```
 
----
+***
 
 ## Project Structure
 
@@ -572,7 +646,7 @@ ouroboros-ai-eligibility-engine/
 └── README.md
 ```
 
----
+***
 
 ## Troubleshooting
 
@@ -617,7 +691,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
----
+***
 
 ## Attribution
 
