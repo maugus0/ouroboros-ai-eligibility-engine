@@ -250,6 +250,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Set up Python
+        if: env.SNYK_TOKEN != ''
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies for Snyk dependency graph
+        if: env.SNYK_TOKEN != ''
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip freeze > snyk-requirements.txt
+
       - name: Skip Snyk (no token)
         if: env.SNYK_TOKEN == ''
         run: echo "SNYK_TOKEN not set; skipping Snyk OSS scan. Add repo secret to enforce dependency checks."
@@ -263,7 +278,8 @@ jobs:
         run: |
           snyk auth "$SNYK_TOKEN"
           snyk test \
-            --file=requirements.txt \
+            --file=snyk-requirements.txt \
+            --package-manager=pip \
             --severity-threshold=high \
             --sarif-file-output=snyk.sarif
 
