@@ -222,7 +222,7 @@ python scripts/seed_test_embeddings.py
 
 ```bash
 curl http://localhost:8004/health
-# {"status":"healthy","version":"0.1.0","database":"connected"}
+# {"status":"healthy","version":"0.1.0","database":"not_connected"}
 ```
 
 Swagger docs are available at `http://localhost:8004/docs`.
@@ -272,6 +272,9 @@ Swagger docs are available at `http://localhost:8004/docs`.
 | `VECTOR_SIMILARITY_TOP_K`        | No          | `5`                        | Max similar results                                 |
 | `VECTOR_SIMILARITY_THRESHOLD`    | No          | `0.7`                      | Minimum cosine similarity                           |
 | **Application**                  | <br />      | <br />                     | <br />                                              |
+| `APP_HOST`                       | No          | `127.0.0.1`                | Application bind host                               |
+| `APP_PORT`                       | No          | `8004`                     | Application bind port                               |
+| `APP_RELOAD`                     | No          | `true`                     | Enable auto-reload in development                   |
 | `LOG_LEVEL`                      | No          | `INFO`                     | `DEBUG\|INFO\|WARNING\|ERROR\|CRITICAL`             |
 | `USE_MOCK_DATA`                  | No          | `false`                    | Use in-memory repos (tests only)                    |
 | `ALLOW_DB_FAILURE`               | No          | `false`                    | Continue if DB unavailable (tests only)             |
@@ -506,8 +509,7 @@ tests/
 │   ├── test_scholarship_scorer.py  # Scholarship scoring logic tests
 │   └── test_prompt_utils.py        # Prompt template loading & context merge
 └── integration/
-    ├── test_matching_attribution_flow.py  # Matching -> persistence -> attribution chain
-    └── test_embedding_vector_flow.py      # Real pgvector insert/query flow
+    └── __init__.py
 ```
 
 ***
