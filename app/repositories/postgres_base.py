@@ -1,6 +1,6 @@
 """Base repository with common async database operations (raw SQL, asyncpg)."""
 
-from typing import Any
+from typing import Any, Optional
 
 from app.core.logging import get_logger
 from app.repositories.db_pool import get_pool
@@ -18,7 +18,7 @@ class PostgresBaseRepository:
             rows = await conn.fetch(query, *args)
             return [dict(row) for row in rows]
 
-    async def execute_one(self, query: str, *args) -> dict[str, Any] | None:
+    async def execute_one(self, query: str, *args) -> Optional[dict[str, Any]]:
         """Execute a SELECT query and return a single result."""
         pool = get_pool()
         async with pool.acquire() as conn:
@@ -31,7 +31,7 @@ class PostgresBaseRepository:
         async with pool.acquire() as conn:
             return await conn.execute(query, *args)
 
-    async def execute_insert_returning(self, query: str, *args) -> dict[str, Any] | None:
+    async def execute_insert_returning(self, query: str, *args) -> Optional[dict[str, Any]]:
         """Execute INSERT with RETURNING and return the inserted row."""
         pool = get_pool()
         async with pool.acquire() as conn:

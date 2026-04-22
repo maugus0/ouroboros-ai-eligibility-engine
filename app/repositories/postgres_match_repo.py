@@ -1,7 +1,7 @@
 """Match results CRUD using raw SQL with asyncpg."""
 
 import json
-from typing import Any
+from typing import Any, Optional
 
 from app.core.logging import get_logger
 from app.repositories.postgres_base import PostgresBaseRepository
@@ -12,7 +12,17 @@ logger = get_logger(__name__)
 class MatchResultRepository(PostgresBaseRepository):
     """Repository for match_results table."""
 
-    async def create(self, data: dict[str, Any]) -> dict[str, Any] | None:
+    @staticmethod
+    def _normalise_record(record: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+        """Decode JSON fields into Python objects for downstream callers."""
+        if record is None:
+            return None
+        score_breakdown = record.get("score_breakdown")
+        if isinstance(score_breakdown, str):
+            record["score_breakdown"] = json.loads(score_breakdown)
+        return record
+
+    async def create(self, data: dict[str, Any]) -> Optional[dict[str, Any]]:
         """Insert a new match result and return it."""
         query = """
             INSERT INTO match_results (
@@ -30,7 +40,7 @@ class MatchResultRepository(PostgresBaseRepository):
                 total_processing_time_ms = EXCLUDED.total_processing_time_ms
             RETURNING *
         """
-        return await self.execute_insert_returning(
+        record = await self.execute_insert_returning(
             query,
             data["user_id"],
             data["entity_type"],
@@ -42,16 +52,17 @@ class MatchResultRepository(PostgresBaseRepository):
             data.get("llm_fallback_used", False),
             data.get("total_processing_time_ms"),
         )
+        return self._normalise_record(record)
 
-    async def get_by_id(self, match_id: str) -> dict[str, Any] | None:
+    async def get_by_id(self, match_id: str) -> Optional[dict[str, Any]]:
         """Retrieve a match result by its ID."""
         query = "SELECT * FROM match_results WHERE id = $1"
-        return await self.execute_one(query, match_id)
+        return self._normalise_record(await self.execute_one(query, match_id))
 
     async def get_by_user(
         self,
         user_id: str,
-        entity_type: str | None = None,
+        entity_type: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
@@ -63,7 +74,8 @@ class MatchResultRepository(PostgresBaseRepository):
                 ORDER BY match_score DESC
                 LIMIT $3 OFFSET $4
             """
-            return await self.execute_query(query, user_id, entity_type, limit, offset)
+            records = await self.execute_query(query, user_id, entity_type, limit, offset)
+            return [self._normalise_record(record) for record in records if record is not None]
 
         query = """
             SELECT * FROM match_results
@@ -71,9 +83,10 @@ class MatchResultRepository(PostgresBaseRepository):
             ORDER BY match_score DESC
             LIMIT $2 OFFSET $3
         """
-        return await self.execute_query(query, user_id, limit, offset)
+        records = await self.execute_query(query, user_id, limit, offset)
+        return [self._normalise_record(record) for record in records if record is not None]
 
-    async def count_by_user(self, user_id: str, entity_type: str | None = None) -> int:
+    async def count_by_user(self, user_id: str, entity_type: Optional[str] = None) -> int:
         """Count match results for a user."""
         if entity_type:
             query = "SELECT COUNT(*) AS cnt FROM match_results WHERE user_id = $1 AND entity_type = $2"

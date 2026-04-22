@@ -1,6 +1,6 @@
 """Generate and query research interest embeddings via OpenAI + pgvector."""
 
-from typing import Any
+from typing import Any, Optional
 
 from app.config import settings
 from app.core.logging import get_logger
@@ -36,7 +36,7 @@ class EmbeddingService:
         self,
         student_profile_id: str,
         research_interest_text: str,
-    ) -> dict[str, Any] | None:
+    ) -> Optional[dict[str, Any]]:
         """Generate and store a research interest embedding."""
         embedding = await self.generate_embedding(research_interest_text)
 
@@ -59,8 +59,8 @@ class EmbeddingService:
     async def search_similar(
         self,
         query_text: str,
-        top_k: int | None = None,
-        similarity_threshold: float | None = None,
+        top_k: Optional[int] = None,
+        similarity_threshold: Optional[float] = None,
     ) -> list[dict[str, Any]]:
         """Find research interests similar to the query text."""
         query_embedding = await self.generate_embedding(query_text)

@@ -1,6 +1,6 @@
 """Generate attribution reports with LLM-assisted reasoning."""
 
-from typing import Any
+from typing import Any, Optional
 
 from app.core.logging import get_logger
 from app.repositories.postgres_attribution_repo import AttributionReportRepository
@@ -23,7 +23,7 @@ class ExplainabilityService:
         entity_data: dict[str, Any],
         score_breakdown: dict[str, float],
         match_score: float,
-    ) -> dict[str, Any] | None:
+    ) -> Optional[dict[str, Any]]:
         """Generate and persist an attribution report.
 
         Uses rule-based analysis for strengths/gaps, and LLM for reasoning narrative.
@@ -67,7 +67,7 @@ class ExplainabilityService:
 
         return await self.attribution_repo.create(report_data)
 
-    async def get_report(self, match_id: str) -> dict[str, Any] | None:
+    async def get_report(self, match_id: str) -> Optional[dict[str, Any]]:
         """Retrieve an attribution report by match ID."""
         return await self.attribution_repo.get_by_match_id(match_id)
 

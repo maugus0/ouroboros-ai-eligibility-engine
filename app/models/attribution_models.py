@@ -1,6 +1,7 @@
 """Pydantic schemas for attribution / explainability reports."""
 
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -24,10 +25,10 @@ class AttributionReport(BaseModel):
     reasoning: str = ""
     confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
     recommendations: list[Recommendation] = Field(default_factory=list)
-    llm_provider: str | None = None
-    llm_model: str | None = None
-    prompt_version: str | None = None
-    created_at: datetime | None = None
+    llm_provider: Optional[str] = None
+    llm_model: Optional[str] = None
+    prompt_version: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 
 class AttributionRequest(BaseModel):

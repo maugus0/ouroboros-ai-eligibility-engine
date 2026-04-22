@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -71,11 +71,11 @@ class MatchResult(BaseModel):
     match_score: float = Field(..., ge=0.0, le=100.0)
     score_breakdown: dict[str, float]
     confidence_level: ConfidenceLevel
-    llm_model_used: str | None = None
+    llm_model_used: Optional[str] = None
     llm_fallback_used: bool = False
-    total_processing_time_ms: int | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    total_processing_time_ms: Optional[int] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 class MatchResultSummary(BaseModel):
@@ -86,4 +86,4 @@ class MatchResultSummary(BaseModel):
     entity_id: str
     match_score: float
     confidence_level: ConfidenceLevel
-    created_at: datetime | None = None
+    created_at: Optional[datetime] = None

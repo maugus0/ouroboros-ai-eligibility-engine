@@ -4,7 +4,7 @@ Templates live under ``prompts/`` as versioned JSON. These helpers are
 used by in-process code (e.g. ``LLMPipelineService``), not by HTTP clients.
 """
 
-from typing import Any
+from typing import Any, Optional
 
 from app.utils.prompt_utils import build_prompt_json, build_prompt_text
 
@@ -17,7 +17,7 @@ def _require_prompt_format(fmt: str) -> None:
 
 
 def get_program_reasoning_prompt(
-    context: dict[str, Any] | None = None,
+    context: Optional[dict[str, Any]] = None,
     fmt: str = "json",
 ) -> str:
     """Build the program reasoning system prompt."""
@@ -28,7 +28,7 @@ def get_program_reasoning_prompt(
 
 
 def get_scholarship_reasoning_prompt(
-    context: dict[str, Any] | None = None,
+    context: Optional[dict[str, Any]] = None,
     fmt: str = "json",
 ) -> str:
     """Build the scholarship reasoning system prompt."""
@@ -39,7 +39,7 @@ def get_scholarship_reasoning_prompt(
 
 
 def get_attribution_report_prompt(
-    context: dict[str, Any] | None = None,
+    context: Optional[dict[str, Any]] = None,
     fmt: str = "json",
 ) -> str:
     """Build the attribution report system prompt."""
@@ -50,7 +50,7 @@ def get_attribution_report_prompt(
 
 
 def get_research_alignment_prompt(
-    context: dict[str, Any] | None = None,
+    context: Optional[dict[str, Any]] = None,
     fmt: str = "json",
 ) -> str:
     """Build the research alignment analysis system prompt."""

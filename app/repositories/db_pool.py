@@ -3,7 +3,9 @@ Async PostgreSQL connection pool using asyncpg.
 Raw SQL queries — no ORM.
 """
 
+import json
 from dataclasses import dataclass
+from typing import Optional
 
 import asyncpg
 
@@ -11,10 +13,28 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-_pool: asyncpg.Pool | None = None
+_pool: Optional[asyncpg.Pool] = None
 
 
-@dataclass(frozen=True, slots=True)
+async def _initialise_connection(connection: asyncpg.Connection) -> None:
+    """Register codecs so JSON/JSONB columns round-trip as Python objects."""
+    await connection.set_type_codec(
+        "json",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+        format="text",
+    )
+    await connection.set_type_codec(
+        "jsonb",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+        format="text",
+    )
+
+
+@dataclass(frozen=True)
 class DatabasePoolConfig:  # pylint: disable=too-many-instance-attributes
     """Parameters for creating the global asyncpg pool."""
 
@@ -40,6 +60,7 @@ async def create_pool(config: DatabasePoolConfig) -> asyncpg.Pool:
         database=config.database,
         user=config.user,
         password=config.password,
+        init=_initialise_connection,
         min_size=config.min_size,
         max_size=config.max_size,
         timeout=config.timeout,

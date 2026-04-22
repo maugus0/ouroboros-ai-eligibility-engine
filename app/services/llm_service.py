@@ -1,5 +1,6 @@
 """LLM pipeline service with OpenAI primary and Anthropic fallback."""
 
+import json
 from typing import Any
 
 from app.core.logging import get_logger
@@ -8,6 +9,7 @@ from app.llm.openai_client import call_openai
 from app.llm.prompts import (
     get_attribution_report_prompt,
     get_program_reasoning_prompt,
+    get_research_alignment_prompt,
     get_scholarship_reasoning_prompt,
 )
 
@@ -16,6 +18,49 @@ logger = get_logger(__name__)
 
 class LLMPipelineService:
     """Handles LLM calls with automatic provider fallback."""
+
+    async def assess_research_alignment(
+        self,
+        user_profile: dict[str, Any],
+        entity_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Score research alignment with an LLM and return structured metadata."""
+        context = {
+            "user_profile": user_profile,
+            "entity_data": entity_data,
+        }
+        prompt = get_research_alignment_prompt(context)
+        system_message = (
+            "You are an academic research alignment analyst. "
+            "Return valid JSON with a score from 0 to 100 plus concise evidence."
+        )
+
+        try:
+            result = await call_openai(
+                prompt=prompt,
+                system_message=system_message,
+                response_format="json",
+            )
+            parsed = self._parse_research_alignment_response(result["content"])
+            parsed["provider"] = "openai"
+            parsed["model"] = result.get("model")
+            parsed["fallback_used"] = False
+            logger.info("research_alignment_openai_success", model=result.get("model"))
+            return parsed
+        except Exception as openai_exc:  # pylint: disable=broad-exception-caught
+            logger.warning("research_alignment_openai_failed", error=str(openai_exc))
+
+        result = await call_anthropic(
+            prompt=prompt,
+            system_message=system_message,
+            max_tokens=400,
+        )
+        parsed = self._parse_research_alignment_response(result["content"])
+        parsed["provider"] = "anthropic"
+        parsed["model"] = result.get("model")
+        parsed["fallback_used"] = True
+        logger.info("research_alignment_anthropic_fallback_success", model=result.get("model"))
+        return parsed
 
     async def generate_reasoning(
         self,
@@ -103,3 +148,34 @@ class LLMPipelineService:
         )
         result["fallback_used"] = True
         return result
+
+    @staticmethod
+    def _coerce_string_list(value: Any) -> list[str]:
+        """Return a list of strings without splitting scalar strings into characters."""
+        if isinstance(value, list):
+            return [str(item) for item in value]
+        return []
+
+    @staticmethod
+    def _parse_research_alignment_response(content: str) -> dict[str, Any]:
+        """Parse and validate structured research-alignment output from the LLM."""
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise ValueError("Research alignment response was not valid JSON") from exc
+
+        raw_score = parsed.get("score", 0.0)
+        try:
+            score = float(raw_score)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Research alignment score must be numeric, got {raw_score!r}") from exc
+
+        parsed["score"] = max(0.0, min(100.0, score))
+        parsed["alignment_summary"] = str(parsed.get("alignment_summary", "")).strip()
+        parsed["overlapping_themes"] = LLMPipelineService._coerce_string_list(parsed.get("overlapping_themes"))
+        parsed["unique_student_interests"] = LLMPipelineService._coerce_string_list(
+            parsed.get("unique_student_interests")
+        )
+        parsed["recommended_faculty"] = LLMPipelineService._coerce_string_list(parsed.get("recommended_faculty"))
+        parsed["confidence"] = str(parsed.get("confidence", "medium")).lower()
+        return parsed

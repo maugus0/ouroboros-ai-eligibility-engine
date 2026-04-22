@@ -1,6 +1,6 @@
 """Program match scoring logic (rule-based + vector-assisted)."""
 
-from typing import Any
+from typing import Any, Optional
 
 from app.core.logging import get_logger
 from app.services.scoring.weights import ProgramScoringWeights
@@ -17,6 +17,8 @@ class ProgramScorer:
         user_profile: dict[str, Any],
         program: dict[str, Any],
         research_similarity: float = 0.0,
+        research_alignment_score: Optional[float] = None,
+        research_alignment_metadata: Optional[dict[str, Any]] = None,
     ) -> tuple[float, dict[str, float], dict[str, Any]]:
         """Compute weighted program match score.
 
@@ -24,6 +26,8 @@ class ProgramScorer:
             user_profile: Student profile data.
             program: Program requirements and details.
             research_similarity: Cosine similarity from pgvector (0.0-1.0).
+            research_alignment_score: Optional explicit LLM-derived score (0-100).
+            research_alignment_metadata: Optional structured metadata for explainability/audit.
 
         Returns:
             (total_score, score_breakdown, metadata)
@@ -43,9 +47,14 @@ class ProgramScorer:
         breakdown["prerequisites"] = prereq_score * ProgramScoringWeights.PREREQUISITES / 100
         metadata["prerequisites"] = prereq_meta
 
-        research_score = research_similarity * 100
+        research_score = research_similarity * 100 if research_alignment_score is None else research_alignment_score
+        research_score = max(0.0, min(100.0, research_score))
         breakdown["research_alignment"] = research_score * ProgramScoringWeights.RESEARCH_ALIGNMENT / 100
-        metadata["research_alignment"] = {"similarity": research_similarity, "score": research_score}
+        metadata["research_alignment"] = {
+            **(research_alignment_metadata or {}),
+            "similarity": research_similarity,
+            "score": research_score,
+        }
 
         practical_score, practical_meta = cls._score_practical_factors(user_profile, program)
         breakdown["practical_factors"] = practical_score * ProgramScoringWeights.PRACTICAL_FACTORS / 100

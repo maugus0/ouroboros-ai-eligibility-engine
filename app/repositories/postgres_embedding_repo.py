@@ -1,6 +1,6 @@
 """Research embeddings CRUD + vector similarity search using raw SQL with asyncpg."""
 
-from typing import Any
+from typing import Any, Optional
 
 from app.core.logging import get_logger
 from app.repositories.postgres_base import PostgresBaseRepository
@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 class ResearchEmbeddingRepository(PostgresBaseRepository):
     """Repository for research_embeddings table with pgvector operations."""
 
-    async def create(self, data: dict[str, Any]) -> dict[str, Any] | None:
+    async def create(self, data: dict[str, Any]) -> Optional[dict[str, Any]]:
         """Insert a new research embedding and return it."""
         query = """
             INSERT INTO research_embeddings (
