@@ -1,6 +1,6 @@
 """Scholarship match scoring logic (rule-based)."""
 
-from typing import Any
+from typing import Any, Optional
 
 from app.core.logging import get_logger
 from app.services.scoring.weights import ScholarshipScoringWeights
@@ -10,6 +10,48 @@ logger = get_logger(__name__)
 
 class ScholarshipScorer:
     """Compute scholarship match scores with explainability."""
+
+    @staticmethod
+    def _coerce_aliases(value: Any, fallback_label: str) -> list[str]:
+        """Normalize aliases into a list without splitting scalar strings."""
+        if isinstance(value, list):
+            aliases = value
+        elif isinstance(value, str):
+            aliases = [value]
+        else:
+            aliases = [fallback_label]
+        return [str(alias).strip().lower() for alias in aliases if str(alias).strip()]
+
+    @staticmethod
+    def _coerce_weight(value: Any) -> float:
+        """Convert optional weight input into a safe non-negative float."""
+        try:
+            weight = float(value)
+        except (TypeError, ValueError):
+            weight = 1.0
+        return max(weight, 0.0)
+
+    @classmethod
+    def _build_weighted_preferred_item(cls, item: Any) -> Optional[dict[str, Any]]:
+        """Normalize a preferred-criterion item into a weighted internal form."""
+        if isinstance(item, dict):
+            label = str(item.get("name") or item.get("criterion") or item.get("key") or "").strip()
+            if not label:
+                return None
+            aliases = item.get("aliases") or item.get("values") or [label]
+            weight = cls._coerce_weight(item.get("weight", 1.0))
+        else:
+            label = str(item).strip()
+            if not label:
+                return None
+            aliases = [label]
+            weight = 1.0
+
+        return {
+            "label": label,
+            "aliases": cls._coerce_aliases(aliases, label),
+            "weight": weight,
+        }
 
     @classmethod
     def compute_score(
@@ -161,8 +203,8 @@ class ScholarshipScorer:
             "failed_criteria": failed_criteria,
         }
 
-    @staticmethod
-    def _score_preferred_criteria(user_profile: dict, scholarship: dict) -> tuple[float, dict]:
+    @classmethod
+    def _score_preferred_criteria(cls, user_profile: dict, scholarship: dict) -> tuple[float, dict]:
         """Score soft / preferred criteria (0-100).
 
         Checks leadership, community service, extracurriculars, etc.
@@ -183,24 +225,9 @@ class ScholarshipScorer:
 
         weighted_items: list[dict[str, Any]] = []
         for item in preferred:
-            if isinstance(item, dict):
-                label = str(item.get("name") or item.get("criterion") or item.get("key") or "").strip()
-                if not label:
-                    continue
-                aliases = item.get("aliases") or item.get("values") or [label]
-                weight = float(item.get("weight", 1.0))
-            else:
-                label = str(item).strip()
-                aliases = [label]
-                weight = 1.0
-
-            weighted_items.append(
-                {
-                    "label": label,
-                    "aliases": [str(alias).strip().lower() for alias in aliases if str(alias).strip()],
-                    "weight": max(weight, 0.0),
-                }
-            )
+            weighted_item = cls._build_weighted_preferred_item(item)
+            if weighted_item is not None:
+                weighted_items.append(weighted_item)
 
         if not weighted_items:
             return 60.0, {"reason": "no_valid_preferred_criteria"}

@@ -46,7 +46,7 @@ class MatchResultRepository(PostgresBaseRepository):
             data["entity_type"],
             data["entity_id"],
             data["match_score"],
-            json.dumps(data["score_breakdown"]),
+            data["score_breakdown"],
             data.get("confidence_level"),
             data.get("llm_model_used"),
             data.get("llm_fallback_used", False),

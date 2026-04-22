@@ -1,5 +1,7 @@
 """Unit tests for batch matching orchestration."""
 
+import asyncio
+
 import pytest
 
 from app.services.matching_service import MatchingService
@@ -57,3 +59,39 @@ async def test_evaluate_batch_returns_count_and_per_entity_results(monkeypatch):
     assert [item["entity_id"] for item in result["results"]] == ["scholarship-1", "scholarship-2"]
     assert result["results"][0]["match_result"]["match_score"] == 80.0
     assert captured_include_attribution == [True, False]
+
+
+@pytest.mark.asyncio
+async def test_evaluate_batch_preserves_input_order_under_concurrency(monkeypatch):
+    async def fake_evaluate(
+        self,
+        user_id: str,
+        entity_type: str,
+        entity_id: str,
+        user_profile: dict,
+        entity_data: dict,
+        include_attribution: bool = True,
+    ):
+        _ = (self, user_id, entity_type, user_profile, entity_data, include_attribution)
+        await asyncio.sleep(0.02 if entity_id == "slow" else 0.0)
+        return {
+            "match_result": {
+                "id": f"match-{entity_id}",
+                "entity_id": entity_id,
+                "match_score": 70.0,
+            }
+        }
+
+    monkeypatch.setattr(MatchingService, "evaluate", fake_evaluate)
+
+    service = MatchingService()
+    result = await service.evaluate_batch(
+        user_id="user-1",
+        user_profile={"gpa_normalized": 3.9},
+        evaluations=[
+            {"entity_type": "scholarship", "entity_id": "slow", "entity_data": {}},
+            {"entity_type": "scholarship", "entity_id": "fast", "entity_data": {}},
+        ],
+    )
+
+    assert [item["entity_id"] for item in result["results"]] == ["slow", "fast"]

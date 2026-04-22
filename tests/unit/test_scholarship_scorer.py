@@ -1,5 +1,7 @@
 """Tests for scholarship match scoring logic."""
 
+import pytest
+
 from app.services.scoring.scholarship_scorer import ScholarshipScorer
 
 
@@ -107,3 +109,18 @@ def test_funding_coverage():
     _total, _breakdown, metadata = ScholarshipScorer.compute_score(user_profile, scholarship)
 
     assert metadata["funding_coverage"]["coverage_ratio"] == 0.5
+
+
+def test_preferred_criteria_defensively_handles_invalid_weight_and_scalar_aliases():
+    user_profile = {"gpa_normalized": 3.8, "activities": ["leadership"], "achievements": ["research"]}
+    scholarship = {
+        "preferred_criteria": [
+            {"name": "leadership", "aliases": "leadership", "weight": "bad"},
+            {"name": "research", "values": "research", "weight": 2},
+        ]
+    }
+
+    _total, _breakdown, metadata = ScholarshipScorer.compute_score(user_profile, scholarship)
+
+    assert metadata["preferred_criteria"]["matched"] == ["leadership", "research"]
+    assert metadata["preferred_criteria"]["match_ratio"] == pytest.approx(1.0)

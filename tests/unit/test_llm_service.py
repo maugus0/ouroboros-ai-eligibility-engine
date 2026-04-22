@@ -36,3 +36,26 @@ def test_parse_research_alignment_response_clamps_out_of_range_scores():
 def test_parse_research_alignment_response_rejects_invalid_json():
     with pytest.raises(ValueError, match="valid JSON"):
         LLMPipelineService._parse_research_alignment_response("not-json")  # pylint: disable=protected-access
+
+
+def test_parse_research_alignment_response_wraps_scalar_strings_for_list_fields():
+    parsed = LLMPipelineService._parse_research_alignment_response(  # pylint: disable=protected-access
+        (
+            '{"score": 72, "alignment_summary": "Good", '
+            '"overlapping_themes": "nlp", "unique_student_interests": "robotics", '
+            '"recommended_faculty": "Prof. X"}'
+        )
+    )
+
+    assert parsed["overlapping_themes"] == ["nlp"]
+    assert parsed["unique_student_interests"] == ["robotics"]
+    assert parsed["recommended_faculty"] == ["Prof. X"]
+
+
+def test_parse_attribution_response_wraps_scalar_strings_for_strengths_and_gaps():
+    parsed = LLMPipelineService._parse_attribution_response(  # pylint: disable=protected-access
+        '{"strengths": "Strong GPA", "gaps": "Needs more research", "reasoning": "Test"}'
+    )
+
+    assert parsed["strengths"] == ["Strong GPA"]
+    assert parsed["gaps"] == ["Needs more research"]
