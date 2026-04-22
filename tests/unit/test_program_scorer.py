@@ -1,5 +1,7 @@
 """Tests for program match scoring logic."""
 
+import pytest
+
 from app.services.scoring.program_scorer import ProgramScorer
 
 
@@ -84,7 +86,7 @@ def test_explicit_llm_research_alignment_score_overrides_similarity():
         },
     )
 
-    assert breakdown["research_alignment"] == 13.05
+    assert breakdown["research_alignment"] == pytest.approx(13.05)
     assert metadata["research_alignment"]["score"] == 87.0
     assert metadata["research_alignment"]["provider"] == "openai"
     assert metadata["research_alignment"]["model"] == "gpt-test"

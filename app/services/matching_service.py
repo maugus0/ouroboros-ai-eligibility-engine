@@ -181,7 +181,7 @@ class MatchingService:
                     "score": similarity * 100.0,
                     "similarity": similarity,
                     "provider": "pgvector_fallback",
-                    "model": settings.OPENAI_EMBEDDING_MODEL,
+                    "model": None,
                     "fallback_used": True,
                     "alignment_summary": "Fallback vector similarity used after LLM alignment failed.",
                 }

@@ -196,5 +196,10 @@ class LLMPipelineService:
             for item in parsed.get("recommendations", [])
             if isinstance(item, dict)
         ]
+        parsed["overlapping_themes"] = LLMPipelineService._coerce_string_list(parsed.get("overlapping_themes"))
+        parsed["unique_student_interests"] = LLMPipelineService._coerce_string_list(
+            parsed.get("unique_student_interests")
+        )
+        parsed["recommended_faculty"] = LLMPipelineService._coerce_string_list(parsed.get("recommended_faculty"))
         parsed["confidence"] = str(parsed.get("confidence", "medium")).lower()
         return parsed
