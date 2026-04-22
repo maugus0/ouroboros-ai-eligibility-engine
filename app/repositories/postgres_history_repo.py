@@ -1,4 +1,6 @@
 """Scoring history CRUD using raw SQL with asyncpg."""
+
+import json
 from typing import Any, Optional
 
 from app.core.logging import get_logger
