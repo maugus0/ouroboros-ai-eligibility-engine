@@ -32,7 +32,7 @@
         "Be specific about which research areas overlap",
         "Return valid JSON only",
         "The score must be an integer or float between 0 and 100",
-        "Keep analysis between 100-200 words"
+        "Keep the alignment_summary between 100 and 200 words"
       ]
     }
   }

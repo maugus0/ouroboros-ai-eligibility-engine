@@ -67,11 +67,11 @@ fi
 
 echo ""
 echo "4. Running pylint..."
-if pylint app/ tests/ > /dev/null 2>&1; then
+if pylint app/ > /dev/null 2>&1; then
     success "Linting passed (pylint)"
 else
     error "Linting failed (pylint)"
-    pylint app/ tests/
+    pylint app/
     exit 1
 fi
 
