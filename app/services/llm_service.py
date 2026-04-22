@@ -16,6 +16,16 @@ from app.llm.prompts import (
 logger = get_logger(__name__)
 
 
+def _coerce_string_list(value: Any) -> list[str]:
+    """Return a list of strings without splitting scalar strings into characters."""
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    if isinstance(value, str):
+        stripped = value.strip()
+        return [stripped] if stripped else []
+    return []
+
+
 class LLMPipelineService:
     """Handles LLM calls with automatic provider fallback."""
 
@@ -157,16 +167,6 @@ class LLMPipelineService:
         return parsed
 
     @staticmethod
-    def _coerce_string_list(value: Any) -> list[str]:
-        """Return a list of strings without splitting scalar strings into characters."""
-        if isinstance(value, list):
-            return [str(item) for item in value]
-        if isinstance(value, str):
-            stripped = value.strip()
-            return [stripped] if stripped else []
-        return []
-
-    @staticmethod
     def _parse_research_alignment_response(content: str) -> dict[str, Any]:
         """Parse and validate structured research-alignment output from the LLM."""
         try:
@@ -182,11 +182,9 @@ class LLMPipelineService:
 
         parsed["score"] = max(0.0, min(100.0, score))
         parsed["alignment_summary"] = str(parsed.get("alignment_summary", "")).strip()
-        parsed["overlapping_themes"] = LLMPipelineService._coerce_string_list(parsed.get("overlapping_themes"))
-        parsed["unique_student_interests"] = LLMPipelineService._coerce_string_list(
-            parsed.get("unique_student_interests")
-        )
-        parsed["recommended_faculty"] = LLMPipelineService._coerce_string_list(parsed.get("recommended_faculty"))
+        parsed["overlapping_themes"] = _coerce_string_list(parsed.get("overlapping_themes"))
+        parsed["unique_student_interests"] = _coerce_string_list(parsed.get("unique_student_interests"))
+        parsed["recommended_faculty"] = _coerce_string_list(parsed.get("recommended_faculty"))
         parsed["confidence"] = str(parsed.get("confidence", "medium")).lower()
         return parsed
 
@@ -198,8 +196,8 @@ class LLMPipelineService:
         except json.JSONDecodeError as exc:
             raise ValueError("Attribution response was not valid JSON") from exc
 
-        parsed["strengths"] = LLMPipelineService._coerce_string_list(parsed.get("strengths"))
-        parsed["gaps"] = LLMPipelineService._coerce_string_list(parsed.get("gaps"))
+        parsed["strengths"] = _coerce_string_list(parsed.get("strengths"))
+        parsed["gaps"] = _coerce_string_list(parsed.get("gaps"))
         parsed["reasoning"] = str(parsed.get("reasoning", "")).strip()
         parsed["recommendations"] = [
             {
