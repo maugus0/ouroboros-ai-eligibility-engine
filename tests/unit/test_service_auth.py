@@ -1,5 +1,7 @@
 """Unit tests for internal token key resolution in service_auth middleware."""
 
+# pylint: disable=protected-access
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
