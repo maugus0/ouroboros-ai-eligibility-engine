@@ -1,6 +1,4 @@
 """Scoring history CRUD using raw SQL with asyncpg."""
-
-import json
 from typing import Any, Optional
 
 from app.core.logging import get_logger
@@ -34,7 +32,7 @@ class ScoringHistoryRepository(PostgresBaseRepository):
         record = await self.execute_insert_returning(
             query,
             data["match_id"],
-            json.dumps(data["scoring_params"]),
+            data["scoring_params"],
             data["computed_score"],
             data.get("computation_time_ms"),
         )

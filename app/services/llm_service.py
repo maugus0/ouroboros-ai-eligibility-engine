@@ -140,7 +140,6 @@ class LLMPipelineService:
             parsed = self._parse_attribution_response(result["content"])
             parsed["provider"] = "openai"
             parsed["model"] = result.get("model")
-            result["fallback_used"] = False
             parsed["fallback_used"] = False
             return parsed
         except Exception as openai_exc:  # pylint: disable=broad-exception-caught
