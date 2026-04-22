@@ -51,9 +51,9 @@ class ProgramScorer:
         research_score = max(0.0, min(100.0, research_score))
         breakdown["research_alignment"] = research_score * ProgramScoringWeights.RESEARCH_ALIGNMENT / 100
         metadata["research_alignment"] = {
+            **(research_alignment_metadata or {}),
             "similarity": research_similarity,
             "score": research_score,
-            **(research_alignment_metadata or {}),
         }
 
         practical_score, practical_meta = cls._score_practical_factors(user_profile, program)
