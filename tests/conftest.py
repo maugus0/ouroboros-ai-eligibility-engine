@@ -35,7 +35,7 @@ def mock_settings():
 
 
 @pytest.fixture
-def service_token_header():
+def internal_token_header():
     """Generate a valid internal bearer token for tests."""
     now = datetime.now(timezone.utc)
     payload = {
@@ -48,5 +48,5 @@ def service_token_header():
         "trace_id": "trace-123",
         "jti": "jti-123",
     }
-    token = jwt.encode(payload, settings.INTERNAL_TOKEN_PUBLIC_KEY, algorithm="HS256")
+    token = jwt.encode(payload, settings.INTERNAL_TOKEN_PUBLIC_KEY, algorithm=settings.INTERNAL_TOKEN_SIGNING_ALGORITHM)
     return {"Authorization": f"Bearer {token}"}

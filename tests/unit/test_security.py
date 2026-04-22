@@ -21,11 +21,11 @@ def test_invalid_service_token():
     assert response.status_code == 401
 
 
-def test_valid_service_token_returns_non_401(service_token_header):
+def test_valid_service_token_returns_non_401(internal_token_header):
     response = client.post(
         "/matching/evaluate",
         json={"user_id": "test"},
-        headers=service_token_header,
+        headers=internal_token_header,
     )
     assert response.status_code not in (401, 403)
 
