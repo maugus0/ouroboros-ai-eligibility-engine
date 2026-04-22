@@ -488,15 +488,15 @@ async def test_orchestrator_auth_validation_and_not_found_behaviour(service_toke
                 json=_program_payload(str(uuid.uuid4()), str(uuid.uuid4())),
             )
             assert missing_token.status_code == 401
-            assert missing_token.json()["detail"] == "X-Service-Token header required"
+            assert missing_token.json()["detail"] == "Internal bearer token missing or invalid"
 
             invalid_token = await integration_client.post(
                 "/matching/evaluate",
                 json=_program_payload(str(uuid.uuid4()), str(uuid.uuid4())),
-                headers={"X-Service-Token": "wrong-token"},
+                headers={"Authorization": "Bearer wrong-token"},
             )
-            assert invalid_token.status_code == 403
-            assert invalid_token.json()["detail"] == "Invalid service token"
+            assert invalid_token.status_code == 401
+            assert invalid_token.json()["detail"] == "Internal bearer token missing or invalid"
 
             invalid_entity_type = await integration_client.post(
                 "/matching/evaluate",
