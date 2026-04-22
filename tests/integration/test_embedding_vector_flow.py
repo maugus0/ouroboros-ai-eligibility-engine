@@ -36,13 +36,20 @@ async def _create_test_pool() -> None:
     )
 
 
-async def _cleanup_embeddings(entity_ids: list[str]) -> None:
+async def _cleanup_embeddings(
+    entity_ids: list[str],
+    student_profile_ids: list[str],
+) -> None:
     """Delete test rows written during embedding integration checks."""
     pool = get_pool()
     async with pool.acquire() as conn:
         await conn.execute(
             "DELETE FROM research_embeddings WHERE entity_id = ANY($1::uuid[])",
             entity_ids,
+        )
+        await conn.execute(
+            "DELETE FROM research_embeddings WHERE student_profile_id = ANY($1::uuid[])",
+            student_profile_ids,
         )
 
 
@@ -77,6 +84,7 @@ async def test_embedding_service_stores_and_queries_real_pgvector(monkeypatch):
 
     entity_ids = [str(uuid.uuid4()) for _ in range(4)]
     nlp_profile_id, physics_profile_id, related_nlp_profile_id, nlp_program_id = entity_ids
+    student_profile_ids = [nlp_profile_id, physics_profile_id, related_nlp_profile_id]
     research_texts = list(vectors_by_text.keys())[:-1]
     pool_created = False
 
@@ -149,6 +157,6 @@ async def test_embedding_service_stores_and_queries_real_pgvector(monkeypatch):
         assert all(float(item["similarity_score"]) >= 0.75 for item in results)
     finally:
         if pool_created:
-            await _cleanup_embeddings(entity_ids)
+            await _cleanup_embeddings(entity_ids, student_profile_ids)
             await _cleanup_embeddings_by_text(research_texts)
         await close_pool()

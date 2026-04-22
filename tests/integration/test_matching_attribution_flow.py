@@ -36,9 +36,13 @@ async def _create_test_pool() -> None:
 
 async def _cleanup_match_records(user_id: str) -> None:
     """Delete test rows; child rows cascade from match_results."""
-    pool = get_pool()
-    async with pool.acquire() as conn:
-        await conn.execute("DELETE FROM match_results WHERE user_id = $1", user_id)
+    try:
+        pool = get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("DELETE FROM match_results WHERE user_id = $1", user_id)
+    except RuntimeError:
+        # Lifespan shutdown may already have closed the shared pool; teardown is best-effort.
+        return
 
 
 async def _cleanup_pool_resources(user_id: Optional[str], pool_created: bool) -> None:

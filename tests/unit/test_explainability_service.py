@@ -135,3 +135,44 @@ async def test_generate_report_uses_mandatory_failure_metadata_for_scholarship_g
     assert report["llm_provider"] == "rule_based"
     assert report["gaps"] == ["GPA 2.8 is below the minimum requirement of 3.5."]
     assert "GPA 2.8 is below the minimum requirement of 3.5." in report["reasoning"]
+
+
+@pytest.mark.asyncio
+async def test_generate_report_preserves_empty_llm_recommendations(monkeypatch):
+    service = ExplainabilityService()
+
+    async def fake_generate_attribution(**_kwargs):
+        return {
+            "strengths": [],
+            "gaps": [],
+            "reasoning": "No additional actions recommended.",
+            "recommendations": [],
+            "confidence": "high",
+            "provider": "openai",
+            "model": "gpt-test",
+            "fallback_used": False,
+        }
+
+    monkeypatch.setattr(service.llm_service, "generate_attribution", fake_generate_attribution)
+    monkeypatch.setattr(
+        service.attribution_repo,
+        "create",
+        AsyncMock(side_effect=lambda report_data: {"id": "report-4", **report_data}),
+    )
+
+    report = await service.generate_report(
+        match_id="match-4",
+        user_profile={"completed_courses": []},
+        entity_data={"prerequisites": ["Statistics"], "entity_type": "program"},
+        score_breakdown={
+            "gpa_threshold": 8.0,
+            "field_relevance": 6.0,
+            "prerequisite_match": 0.0,
+            "research_alignment": 4.0,
+            "practical_factors": 2.0,
+        },
+        match_score=20.0,
+    )
+
+    assert report is not None
+    assert report["recommendations"] == []

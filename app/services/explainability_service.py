@@ -51,7 +51,10 @@ class ExplainabilityService:
             confidence = self._combine_confidence(rule_confidence, llm_result.get("confidence"))
             strengths = self._merge_unique_items(strengths, llm_result.get("strengths", []))
             gaps = self._merge_unique_items(gaps, llm_result.get("gaps", []))
-            recommendations = llm_result.get("recommendations") or self._generate_recommendations(gaps)
+            llm_recommendations = llm_result.get("recommendations")
+            recommendations = (
+                self._generate_recommendations(gaps) if llm_recommendations is None else llm_recommendations
+            )
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("llm_reasoning_failed", error=str(exc))
             reasoning = self._fallback_reasoning(strengths, gaps, match_score)

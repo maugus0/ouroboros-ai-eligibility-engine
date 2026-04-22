@@ -21,6 +21,20 @@ ALTER COLUMN entity_id SET NOT NULL;
 ALTER TABLE research_embeddings
 ALTER COLUMN student_profile_id DROP NOT NULL;
 
+WITH ranked_embeddings AS (
+    SELECT
+        ctid,
+        ROW_NUMBER() OVER (
+            PARTITION BY entity_type, entity_id
+            ORDER BY updated_at DESC NULLS LAST, ctid DESC
+        ) AS row_num
+    FROM research_embeddings
+)
+DELETE FROM research_embeddings re
+USING ranked_embeddings ranked
+WHERE re.ctid = ranked.ctid
+  AND ranked.row_num > 1;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_research_embeddings_entity_unique
 ON research_embeddings(entity_type, entity_id);
 

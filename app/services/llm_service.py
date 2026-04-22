@@ -16,6 +16,13 @@ from app.llm.prompts import (
 logger = get_logger(__name__)
 
 
+def _coerce_string_list(value: Any) -> list[str]:
+    """Return a string list only when the payload field is already a list."""
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
+
+
 class LLMPipelineService:
     """Handles LLM calls with automatic provider fallback."""
 
@@ -140,7 +147,6 @@ class LLMPipelineService:
             parsed = self._parse_attribution_response(result["content"])
             parsed["provider"] = "openai"
             parsed["model"] = result.get("model")
-            result["fallback_used"] = False
             parsed["fallback_used"] = False
             return parsed
         except Exception as openai_exc:  # pylint: disable=broad-exception-caught
@@ -172,9 +178,9 @@ class LLMPipelineService:
 
         parsed["score"] = max(0.0, min(100.0, score))
         parsed["alignment_summary"] = str(parsed.get("alignment_summary", "")).strip()
-        parsed["overlapping_themes"] = [str(item) for item in parsed.get("overlapping_themes", [])]
-        parsed["unique_student_interests"] = [str(item) for item in parsed.get("unique_student_interests", [])]
-        parsed["recommended_faculty"] = [str(item) for item in parsed.get("recommended_faculty", [])]
+        parsed["overlapping_themes"] = _coerce_string_list(parsed.get("overlapping_themes"))
+        parsed["unique_student_interests"] = _coerce_string_list(parsed.get("unique_student_interests"))
+        parsed["recommended_faculty"] = _coerce_string_list(parsed.get("recommended_faculty"))
         parsed["confidence"] = str(parsed.get("confidence", "medium")).lower()
         return parsed
 
