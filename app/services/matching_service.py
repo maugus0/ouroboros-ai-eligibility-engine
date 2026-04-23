@@ -49,7 +49,7 @@ class MatchingService:
         start = time.perf_counter()
 
         if entity_type == EntityType.PROGRAM:
-            research_alignment = await self._get_research_alignment(user_profile, entity_data)
+            research_alignment = await self._get_research_alignment(user_id, entity_id, user_profile, entity_data)
             total_score, breakdown, metadata = ProgramScorer.compute_score(
                 user_profile,
                 entity_data,
@@ -193,10 +193,12 @@ class MatchingService:
 
     async def _get_research_alignment(
         self,
+        user_id: str,
+        program_id: str,
         user_profile: dict[str, Any],
         program: dict[str, Any],
     ) -> dict[str, Any]:
-        """Get research alignment via LLM first, then fall back to pgvector similarity."""
+        """Get research alignment using vector baseline plus LLM semantic reasoning."""
         research_interests = user_profile.get("research_interests", "")
         if not research_interests:
             return {
@@ -208,33 +210,72 @@ class MatchingService:
                 "alignment_summary": "",
             }
 
+        research_interest_text = (
+            research_interests if isinstance(research_interests, str) else " ".join(research_interests)
+        ).strip()
+        program_research_focus = self._extract_program_research_focus(program)
+        vector_similarity = 0.0
+        vector_metadata: dict[str, Any] = {
+            "vector_similarity": 0.0,
+            "vector_available": False,
+            "program_research_focus": program_research_focus,
+        }
+
+        if program_research_focus:
+            try:
+                vector_result = await self.embedding_service.compute_pair_similarity(
+                    student_profile_id=user_id,
+                    student_research_text=research_interest_text,
+                    program_id=program_id,
+                    program_research_text=program_research_focus,
+                )
+                vector_similarity = float(vector_result.get("similarity", 0.0))
+                vector_metadata = {
+                    **vector_result,
+                    "vector_similarity": vector_similarity,
+                    "vector_available": True,
+                    "program_research_focus": program_research_focus,
+                }
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                logger.warning("research_alignment_vector_failed", error=str(exc))
+        else:
+            vector_metadata["reason"] = "no_program_research_focus"
+
         try:
             llm_result = await self.llm_service.assess_research_alignment(
                 user_profile=user_profile, entity_data=program
             )
-            llm_result.setdefault("similarity", llm_result.get("score", 0.0) / 100.0)
+            llm_score = float(llm_result.get("score", 0.0))
+            hybrid_score = self._combine_research_alignment_scores(vector_similarity, llm_score)
+            llm_result.setdefault("llm_score", llm_score)
+            llm_result["score"] = hybrid_score
+            llm_result["similarity"] = vector_similarity
+            llm_result["vector_similarity"] = vector_similarity
+            llm_result["vector_available"] = vector_metadata.get("vector_available", False)
+            llm_result["program_research_focus"] = program_research_focus
+            llm_result["baseline_provider"] = "pgvector"
+            llm_result["scoring_method"] = "hybrid_vector_llm"
+            llm_result["student_embedding_reused"] = vector_metadata.get("student_embedding_reused", False)
+            llm_result["program_embedding_reused"] = vector_metadata.get("program_embedding_reused", False)
             return llm_result
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("research_alignment_llm_failed", error=str(exc))
 
-        try:
-            results = await self.embedding_service.search_similar(
-                query_text=research_interests if isinstance(research_interests, str) else " ".join(research_interests),
-                top_k=1,
-            )
-            if results:
-                similarity = float(results[0].get("similarity_score", 0.0))
-                return {
-                    "score": similarity * 100.0,
-                    "similarity": similarity,
-                    "provider": "pgvector_fallback",
-                    "model": None,
-                    "embedding_model": settings.OPENAI_EMBEDDING_MODEL,
-                    "fallback_used": True,
-                    "alignment_summary": "Fallback vector similarity used after LLM alignment failed.",
-                }
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning("research_alignment_fallback_failed", error=str(exc))
+        if vector_metadata.get("vector_available"):
+            return {
+                "score": vector_similarity * 100.0,
+                "similarity": vector_similarity,
+                "vector_similarity": vector_similarity,
+                "provider": "pgvector_fallback",
+                "model": None,
+                "embedding_model": settings.OPENAI_EMBEDDING_MODEL,
+                "fallback_used": True,
+                "alignment_summary": "Vector similarity fallback used after LLM alignment failed.",
+                "program_research_focus": program_research_focus,
+                "student_embedding_reused": vector_metadata.get("student_embedding_reused", False),
+                "program_embedding_reused": vector_metadata.get("program_embedding_reused", False),
+                "scoring_method": "vector_only",
+            }
 
         return {
             "score": 0.0,
@@ -243,6 +284,7 @@ class MatchingService:
             "model": None,
             "fallback_used": True,
             "alignment_summary": "",
+            **vector_metadata,
         }
 
     @staticmethod
@@ -253,3 +295,35 @@ class MatchingService:
         if score >= settings.MATCH_SCORE_THRESHOLD:
             return ConfidenceLevel.MEDIUM
         return ConfidenceLevel.LOW
+
+    @staticmethod
+    def _extract_program_research_focus(program: dict[str, Any]) -> str:
+        """Build a text representation of program research focus from available fields."""
+        candidate_keys = [
+            "research_focus",
+            "research_focus_text",
+            "program_research_focus",
+            "research_summary",
+            "faculty_research",
+            "research_areas",
+            "keywords",
+        ]
+
+        parts: list[str] = []
+        for key in candidate_keys:
+            value = program.get(key)
+            if isinstance(value, str) and value.strip():
+                parts.append(value.strip())
+            elif isinstance(value, list):
+                parts.extend(str(item).strip() for item in value if str(item).strip())
+
+        return " ".join(parts).strip()
+
+    @staticmethod
+    def _combine_research_alignment_scores(vector_similarity: float, llm_score: float) -> float:
+        """Blend vector baseline with LLM reasoning into a 0-100 research alignment score."""
+        vector_score = max(0.0, min(100.0, vector_similarity * 100.0))
+        llm_score = max(0.0, min(100.0, llm_score))
+        if vector_score <= 0.0:
+            return llm_score
+        return (vector_score * 0.4) + (llm_score * 0.6)

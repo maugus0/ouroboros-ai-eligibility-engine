@@ -53,3 +53,8 @@ def test_missing_token_on_attribution():
 def test_missing_token_on_internal_eligibility_report():
     response = client.get("/api/v1/eligibility/report/match-123")
     assert response.status_code == 401
+
+
+def test_missing_token_on_internal_eligibility_evaluate():
+    response = client.post("/api/v1/eligibility/evaluate", json={"user_id": "test"})
+    assert response.status_code == 401

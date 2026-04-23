@@ -31,7 +31,6 @@ class ExplainabilityService:
         """
         strengths = self._extract_strengths(score_breakdown, match_score)
         gaps = self._extract_gaps(score_breakdown, user_profile, entity_data, score_metadata)
-        gaps = self._extract_gaps(score_breakdown, user_profile, entity_data)
         rule_confidence = self._infer_rule_confidence(match_score, score_breakdown)
         confidence = rule_confidence
 
@@ -52,7 +51,10 @@ class ExplainabilityService:
             confidence = self._combine_confidence(rule_confidence, llm_result.get("confidence"))
             strengths = self._merge_unique_items(strengths, llm_result.get("strengths", []))
             gaps = self._merge_unique_items(gaps, llm_result.get("gaps", []))
-            recommendations = llm_result.get("recommendations") or self._generate_recommendations(gaps)
+            llm_recommendations = llm_result.get("recommendations")
+            recommendations = (
+                self._generate_recommendations(gaps) if llm_recommendations is None else llm_recommendations
+            )
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("llm_reasoning_failed", error=str(exc))
             reasoning = self._fallback_reasoning(strengths, gaps, match_score)

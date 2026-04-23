@@ -53,6 +53,40 @@ class ScholarshipScorer:
             "weight": weight,
         }
 
+    @staticmethod
+    def _collect_user_preference_terms(user_profile: dict[str, Any]) -> set[str]:
+        """Flatten user preference-like fields into a normalized lookup set."""
+        return {
+            str(value).strip().lower()
+            for value in [
+                *user_profile.get("activities", []),
+                *user_profile.get("achievements", []),
+                *user_profile.get("strengths", []),
+                *user_profile.get("tags", []),
+            ]
+            if str(value).strip()
+        }
+
+    @staticmethod
+    def _evaluate_preferred_matches(
+        weighted_items: list[dict[str, Any]],
+        user_terms: set[str],
+    ) -> tuple[list[str], list[str], float, float]:
+        """Compute matched/unmatched preferred criteria and weighted totals."""
+        total_weight = sum(item["weight"] for item in weighted_items) or 1.0
+        matched: list[str] = []
+        unmatched: list[str] = []
+        matched_weight = 0.0
+
+        for item in weighted_items:
+            if any(alias in user_terms for alias in item["aliases"]):
+                matched.append(item["label"])
+                matched_weight += item["weight"]
+            else:
+                unmatched.append(item["label"])
+
+        return matched, unmatched, matched_weight, total_weight
+
     @classmethod
     def compute_score(
         cls,
@@ -213,36 +247,17 @@ class ScholarshipScorer:
         if not preferred:
             return 60.0, {"reason": "no_preferred_criteria"}
 
-        user_all = {
-            str(value).strip().lower()
-            for value in [
-                *user_profile.get("activities", []),
-                *user_profile.get("achievements", []),
-                *user_profile.get("strengths", []),
-                *user_profile.get("tags", []),
-            ]
-        }
-
-        weighted_items: list[dict[str, Any]] = []
-        for item in preferred:
-            weighted_item = cls._build_weighted_preferred_item(item)
-            if weighted_item is not None:
-                weighted_items.append(weighted_item)
+        weighted_items = [
+            normalized_item
+            for normalized_item in (cls._build_weighted_preferred_item(item) for item in preferred)
+            if normalized_item is not None
+        ]
 
         if not weighted_items:
             return 60.0, {"reason": "no_valid_preferred_criteria"}
 
-        total_weight = sum(item["weight"] for item in weighted_items) or 1.0
-        matched: list[str] = []
-        unmatched: list[str] = []
-        matched_weight = 0.0
-        for item in weighted_items:
-            if any(alias in user_all for alias in item["aliases"]):
-                matched.append(item["label"])
-                matched_weight += item["weight"]
-            else:
-                unmatched.append(item["label"])
-
+        user_terms = cls._collect_user_preference_terms(user_profile)
+        matched, unmatched, matched_weight, total_weight = cls._evaluate_preferred_matches(weighted_items, user_terms)
         match_ratio = matched_weight / total_weight
         score = min(100.0, match_ratio * 130)
 

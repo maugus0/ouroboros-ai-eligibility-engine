@@ -50,3 +50,9 @@ def internal_token_header():
     }
     token = jwt.encode(payload, settings.INTERNAL_TOKEN_PUBLIC_KEY, algorithm=settings.INTERNAL_TOKEN_SIGNING_ALGORITHM)
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def service_token_header(request):
+    """Backward-compatible alias for tests still using the legacy fixture name."""
+    return request.getfixturevalue("internal_token_header")

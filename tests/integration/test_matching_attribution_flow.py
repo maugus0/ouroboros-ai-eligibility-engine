@@ -141,7 +141,7 @@ def _research_alignment_result(
 
 @pytest.mark.anyio
 async def test_orchestrator_request_persists_match_and_exposes_attribution_report(
-    internal_token_header,
+    service_token_header,
     monkeypatch,
 ):
     async def fake_assess_research_alignment(_self, user_profile, entity_data):
@@ -168,8 +168,23 @@ async def test_orchestrator_request_persists_match_and_exposes_attribution_repor
             "fallback_used": False,
         }
 
+    async def fake_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, student_research_text, program_id, program_research_text)
+        return {
+            "similarity": 0.88,
+            "student_embedding_reused": False,
+            "program_embedding_reused": False,
+        }
+
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
     monkeypatch.setattr(LLMPipelineService, "generate_attribution", fake_generate_attribution)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", fake_compute_pair_similarity)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -195,7 +210,7 @@ async def test_orchestrator_request_persists_match_and_exposes_attribution_repor
             response = await integration_client.post(
                 "/matching/evaluate",
                 json=payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert response.status_code == 200
 
@@ -239,7 +254,7 @@ async def test_orchestrator_request_persists_match_and_exposes_attribution_repor
 
             report_response = await integration_client.get(
                 f"/attribution/report/{match_id}",
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert report_response.status_code == 200
             report_body = report_response.json()
@@ -253,14 +268,29 @@ async def test_orchestrator_request_persists_match_and_exposes_attribution_repor
 
 @pytest.mark.anyio
 async def test_orchestrator_request_without_attribution_persists_match_and_supports_queries(
-    internal_token_header,
+    service_token_header,
     monkeypatch,
 ):
     async def fake_assess_research_alignment(_self, user_profile, entity_data):
         _ = (user_profile, entity_data)
         return _research_alignment_result(72.0)
 
+    async def fake_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, student_research_text, program_id, program_research_text)
+        return {
+            "similarity": 0.72,
+            "student_embedding_reused": False,
+            "program_embedding_reused": False,
+        }
+
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", fake_compute_pair_similarity)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -284,7 +314,7 @@ async def test_orchestrator_request_without_attribution_persists_match_and_suppo
             response = await integration_client.post(
                 "/matching/evaluate",
                 json=payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert response.status_code == 200
             body = response.json()
@@ -304,7 +334,7 @@ async def test_orchestrator_request_without_attribution_persists_match_and_suppo
             list_response = await integration_client.get(
                 f"/matching/results/{user_id}",
                 params={"entity_type": "program", "page": 1, "page_size": 10},
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert list_response.status_code == 200
             list_body = list_response.json()
@@ -314,7 +344,7 @@ async def test_orchestrator_request_without_attribution_persists_match_and_suppo
 
             detail_response = await integration_client.get(
                 f"/matching/results/detail/{match_id}",
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert detail_response.status_code == 200
             detail_body = detail_response.json()
@@ -323,7 +353,7 @@ async def test_orchestrator_request_without_attribution_persists_match_and_suppo
 
             missing_report_response = await integration_client.get(
                 f"/attribution/report/{match_id}",
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert missing_report_response.status_code == 200
             missing_report_body = missing_report_response.json()
@@ -336,7 +366,7 @@ async def test_orchestrator_request_without_attribution_persists_match_and_suppo
 
 @pytest.mark.anyio
 async def test_program_output_baseline_uses_expected_score_and_rule_based_attribution(
-    internal_token_header,
+    service_token_header,
     monkeypatch,
 ):
     async def fake_assess_research_alignment(_self, user_profile, entity_data):
@@ -354,8 +384,23 @@ async def test_program_output_baseline_uses_expected_score_and_rule_based_attrib
         _ = (match_id, user_profile, entity_data, score_breakdown, match_score)
         raise RuntimeError("LLM unavailable for baseline verification")
 
+    async def fake_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, student_research_text, program_id, program_research_text)
+        return {
+            "similarity": 0.8,
+            "student_embedding_reused": True,
+            "program_embedding_reused": False,
+        }
+
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
     monkeypatch.setattr(LLMPipelineService, "generate_attribution", fail_generate_attribution)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", fake_compute_pair_similarity)
 
     user_id = str(uuid.uuid4())
     entity_id = str(uuid.uuid4())
@@ -411,7 +456,7 @@ async def test_program_output_baseline_uses_expected_score_and_rule_based_attrib
             response = await integration_client.post(
                 "/matching/evaluate",
                 json=payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert response.status_code == 200
             body = response.json()
@@ -465,7 +510,7 @@ async def test_program_output_baseline_uses_expected_score_and_rule_based_attrib
 
 
 @pytest.mark.anyio
-async def test_orchestrator_auth_validation_and_not_found_behaviour(internal_token_header):
+async def test_orchestrator_auth_validation_and_not_found_behaviour(service_token_header):
     missing_user_id = str(uuid.uuid4())
     pool_created = False
     invalid_payload = {
@@ -493,26 +538,26 @@ async def test_orchestrator_auth_validation_and_not_found_behaviour(internal_tok
                 json=_program_payload(str(uuid.uuid4()), str(uuid.uuid4())),
             )
             assert missing_token.status_code == 401
-            assert missing_token.json()["detail"] == "Internal bearer token missing or invalid"
+            assert missing_token.json()["detail"] == "X-Service-Token header required"
 
             invalid_token = await integration_client.post(
                 "/matching/evaluate",
                 json=_program_payload(str(uuid.uuid4()), str(uuid.uuid4())),
-                headers={"Authorization": "Bearer wrong-token"},
+                headers={"X-Service-Token": "wrong-token"},
             )
-            assert invalid_token.status_code == 401
-            assert invalid_token.json()["detail"] == "Internal bearer token missing or invalid"
+            assert invalid_token.status_code == 403
+            assert invalid_token.json()["detail"] == "Invalid service token"
 
             invalid_entity_type = await integration_client.post(
                 "/matching/evaluate",
                 json=invalid_payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert invalid_entity_type.status_code == 422
 
             missing_match = await integration_client.get(
                 f"/matching/results/detail/{uuid.uuid4()}",
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert missing_match.status_code == 200
             assert missing_match.json() == {
@@ -523,7 +568,7 @@ async def test_orchestrator_auth_validation_and_not_found_behaviour(internal_tok
 
             missing_report = await integration_client.get(
                 f"/attribution/report/{uuid.uuid4()}",
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert missing_report.status_code == 200
             assert missing_report.json() == {
@@ -534,7 +579,7 @@ async def test_orchestrator_auth_validation_and_not_found_behaviour(internal_tok
 
             empty_results = await integration_client.get(
                 f"/matching/results/{missing_user_id}",
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert empty_results.status_code == 200
             empty_body = empty_results.json()
@@ -548,7 +593,7 @@ async def test_orchestrator_auth_validation_and_not_found_behaviour(internal_tok
 
 @pytest.mark.anyio
 async def test_scholarship_output_baseline_uses_expected_score_and_rule_based_attribution(
-    internal_token_header,
+    service_token_header,
     monkeypatch,
 ):
     async def fail_generate_attribution(
@@ -595,7 +640,7 @@ async def test_scholarship_output_baseline_uses_expected_score_and_rule_based_at
             response = await integration_client.post(
                 "/matching/evaluate",
                 json=payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert response.status_code == 200
             body = response.json()
@@ -652,15 +697,21 @@ async def test_scholarship_output_baseline_uses_expected_score_and_rule_based_at
 
 @pytest.mark.anyio
 async def test_program_evaluation_degrades_gracefully_when_research_similarity_fails(
-    internal_token_header,
+    service_token_header,
     monkeypatch,
 ):
     async def failing_assess_research_alignment(_self, user_profile, entity_data):
         _ = (user_profile, entity_data)
         raise RuntimeError("llm alignment failed")
 
-    async def failing_search_similar(_self, query_text: str, top_k=None, similarity_threshold=None):
-        _ = (query_text, top_k, similarity_threshold)
+    async def failing_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, student_research_text, program_id, program_research_text)
         raise RuntimeError("pgvector lookup failed")
 
     async def fail_generate_attribution(
@@ -675,7 +726,7 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
         raise RuntimeError("LLM unavailable for degradation verification")
 
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", failing_assess_research_alignment)
-    monkeypatch.setattr(EmbeddingService, "search_similar", failing_search_similar)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", failing_compute_pair_similarity)
     monkeypatch.setattr(LLMPipelineService, "generate_attribution", fail_generate_attribution)
 
     user_id = str(uuid.uuid4())
@@ -701,7 +752,7 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
             response = await integration_client.post(
                 "/matching/evaluate",
                 json=payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert response.status_code == 200
             body = response.json()
@@ -737,7 +788,7 @@ async def test_program_evaluation_degrades_gracefully_when_research_similarity_f
 
 @pytest.mark.anyio
 async def test_results_query_contracts_cover_pagination_filtering_sorting_and_detail(
-    internal_token_header,
+    service_token_header,
     monkeypatch,
 ):
     async def fake_assess_research_alignment(_self, user_profile, entity_data):
@@ -749,7 +800,26 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
         query_text = user_profile["research_interests"]
         return _research_alignment_result(mapping[query_text] * 100.0)
 
+    async def fake_compute_pair_similarity(
+        _self,
+        student_profile_id: str,
+        student_research_text: str,
+        program_id: str,
+        program_research_text: str,
+    ):
+        _ = (student_profile_id, program_id, program_research_text)
+        mapping = {
+            "high-fit research": 0.9,
+            "low-fit research": 0.1,
+        }
+        return {
+            "similarity": mapping[student_research_text],
+            "student_embedding_reused": False,
+            "program_embedding_reused": False,
+        }
+
     monkeypatch.setattr(LLMPipelineService, "assess_research_alignment", fake_assess_research_alignment)
+    monkeypatch.setattr(EmbeddingService, "compute_pair_similarity", fake_compute_pair_similarity)
 
     user_id = str(uuid.uuid4())
     high_program_entity_id = str(uuid.uuid4())
@@ -800,17 +870,17 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
             high_program_response = await integration_client.post(
                 "/matching/evaluate",
                 json=high_program_payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             low_program_response = await integration_client.post(
                 "/matching/evaluate",
                 json=low_program_payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             scholarship_response = await integration_client.post(
                 "/matching/evaluate",
                 json=scholarship_payload,
-                headers=internal_token_header,
+                headers=service_token_header,
             )
 
             assert high_program_response.status_code == 200
@@ -827,7 +897,7 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
             filtered_page_1 = await integration_client.get(
                 f"/matching/results/{user_id}",
                 params={"entity_type": "program", "page": 1, "page_size": 1},
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert filtered_page_1.status_code == 200
             filtered_page_1_body = filtered_page_1.json()
@@ -841,7 +911,7 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
             filtered_page_2 = await integration_client.get(
                 f"/matching/results/{user_id}",
                 params={"entity_type": "program", "page": 2, "page_size": 1},
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert filtered_page_2.status_code == 200
             filtered_page_2_body = filtered_page_2.json()
@@ -850,7 +920,7 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
             all_results = await integration_client.get(
                 f"/matching/results/{user_id}",
                 params={"page": 1, "page_size": 10},
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert all_results.status_code == 200
             all_results_body = all_results.json()
@@ -863,7 +933,7 @@ async def test_results_query_contracts_cover_pagination_filtering_sorting_and_de
 
             scholarship_detail = await integration_client.get(
                 f"/matching/results/detail/{scholarship_match['id']}",
-                headers=internal_token_header,
+                headers=service_token_header,
             )
             assert scholarship_detail.status_code == 200
             scholarship_detail_body = scholarship_detail.json()

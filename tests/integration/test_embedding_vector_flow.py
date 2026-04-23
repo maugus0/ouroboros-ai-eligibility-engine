@@ -36,10 +36,17 @@ async def _create_test_pool() -> None:
     )
 
 
-async def _cleanup_embeddings(student_profile_ids: list[str]) -> None:
+async def _cleanup_embeddings(
+    entity_ids: list[str],
+    student_profile_ids: list[str],
+) -> None:
     """Delete test rows written during embedding integration checks."""
     pool = get_pool()
     async with pool.acquire() as conn:
+        await conn.execute(
+            "DELETE FROM research_embeddings WHERE entity_id = ANY($1::uuid[])",
+            entity_ids,
+        )
         await conn.execute(
             "DELETE FROM research_embeddings WHERE student_profile_id = ANY($1::uuid[])",
             student_profile_ids,
@@ -75,8 +82,9 @@ async def test_embedding_service_stores_and_queries_real_pgvector(monkeypatch):
     service = EmbeddingService()
     repo = ResearchEmbeddingRepository()
 
-    profile_ids = [str(uuid.uuid4()) for _ in range(3)]
-    nlp_profile_id, physics_profile_id, related_nlp_profile_id = profile_ids
+    entity_ids = [str(uuid.uuid4()) for _ in range(4)]
+    nlp_profile_id, physics_profile_id, related_nlp_profile_id, nlp_program_id = entity_ids
+    student_profile_ids = [nlp_profile_id, physics_profile_id, related_nlp_profile_id]
     research_texts = list(vectors_by_text.keys())[:-1]
     pool_created = False
 
@@ -106,17 +114,38 @@ async def test_embedding_service_stores_and_queries_real_pgvector(monkeypatch):
         assert created_physics is not None
         assert created_related_nlp is not None
         assert str(created_nlp["student_profile_id"]) == nlp_profile_id
+        assert created_nlp["entity_type"] == "student"
         assert created_nlp["embedding_model"] == settings.OPENAI_EMBEDDING_MODEL
         assert created_nlp["token_count"] > 0
 
         stored_records = await repo.get_by_profile_id(nlp_profile_id)
         assert len(stored_records) == 1
         assert stored_records[0]["research_interest_text"] == "Natural language processing for multilingual systems"
+        assert str(stored_records[0]["entity_id"]) == nlp_profile_id
+
+        created_program = await service.store_program_embedding(
+            nlp_program_id,
+            "Deep learning methods for language understanding",
+        )
+        assert created_program is not None
+        assert created_program["entity_type"] == "program"
+        assert str(created_program["entity_id"]) == nlp_program_id
+
+        pair_similarity = await service.compute_pair_similarity(
+            student_profile_id=nlp_profile_id,
+            student_research_text="Natural language processing for multilingual systems",
+            program_id=nlp_program_id,
+            program_research_text="Deep learning methods for language understanding",
+        )
+        assert pair_similarity["similarity"] > 0.9
+        assert pair_similarity["student_embedding_reused"] is True
+        assert pair_similarity["program_embedding_reused"] is True
 
         results = await service.search_similar(
             "NLP for multilingual assistants",
             top_k=3,
             similarity_threshold=0.75,
+            entity_type="student",
         )
 
         returned_ids = [str(item["student_profile_id"]) for item in results]
@@ -128,6 +157,6 @@ async def test_embedding_service_stores_and_queries_real_pgvector(monkeypatch):
         assert all(float(item["similarity_score"]) >= 0.75 for item in results)
     finally:
         if pool_created:
-            await _cleanup_embeddings(profile_ids)
+            await _cleanup_embeddings(entity_ids, student_profile_ids)
             await _cleanup_embeddings_by_text(research_texts)
         await close_pool()
