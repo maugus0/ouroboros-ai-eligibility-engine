@@ -3,15 +3,15 @@ services:
     image: pgvector/pgvector:pg16
     container_name: eligibility-postgres
     environment:
-      POSTGRES_PASSWORD: root_password
-      POSTGRES_DB: ouroboros_eligibility_db
-      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-root_password}
+      POSTGRES_DB: ${DB_NAME:-ouroboros_eligibility_db}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
     ports:
       - "${DOCKER_POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,13 +23,14 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8004:8004"
+      - "${APP_PORT:-8004}:${APP_PORT:-8004}"
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-ouroboros_eligibility_db}
       - DB_USERNAME=${DB_USERNAME:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-root_password}
+<<<<<<< HEAD
       - ALLOW_DB_FAILURE=false
       - INTERNAL_TOKEN_VERIFY_ENABLED=${INTERNAL_TOKEN_VERIFY_ENABLED:-false}
       - INTERNAL_TOKEN_SIGNING_ALGORITHM=${INTERNAL_TOKEN_SIGNING_ALGORITHM:-RS256}
@@ -37,9 +38,14 @@ services:
       - INTERNAL_TOKEN_ISSUER=${INTERNAL_TOKEN_ISSUER:-ouroboros-orchestrator-internal}
       - INTERNAL_TOKEN_AUDIENCE=${INTERNAL_TOKEN_AUDIENCE:-ouroboros.eligibility-engine}
       - LOG_LEVEL=DEBUG
+=======
+      - ALLOW_DB_FAILURE=${ALLOW_DB_FAILURE:-false}
+      - X_SERVICE_TOKEN=${X_SERVICE_TOKEN:-dev-service-token}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+>>>>>>> 1fb0116 (fix(docker): parameterize compose runtime settings)
     volumes:
       - .:/app
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port ${APP_PORT:-8004} --reload
 
 volumes:
   postgres_data:
