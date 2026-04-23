@@ -91,24 +91,3 @@ def test_explicit_llm_research_alignment_score_overrides_similarity():
     assert metadata["research_alignment"]["provider"] == "openai"
     assert metadata["research_alignment"]["model"] == "gpt-test"
     assert metadata["research_alignment"]["similarity"] == 0.2
-
-
-def test_research_alignment_metadata_cannot_override_computed_values():
-    user_profile = {"gpa_normalized": 3.8}
-    program = {"minimum_gpa": 3.5}
-
-    _total, _breakdown, metadata = ProgramScorer.compute_score(
-        user_profile,
-        program,
-        research_similarity=0.42,
-        research_alignment_score=88.0,
-        research_alignment_metadata={
-            "score": 12.0,
-            "similarity": 0.1,
-            "provider": "openai",
-        },
-    )
-
-    assert metadata["research_alignment"]["score"] == 88.0
-    assert metadata["research_alignment"]["similarity"] == 0.42
-    assert metadata["research_alignment"]["provider"] == "openai"

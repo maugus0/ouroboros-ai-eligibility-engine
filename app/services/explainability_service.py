@@ -30,28 +30,32 @@ class ExplainabilityService:
         """
         strengths = self._extract_strengths(score_breakdown, match_score)
         gaps = self._extract_gaps(score_breakdown, user_profile, entity_data)
-        confidence = self._infer_confidence(match_score)
+        rule_confidence = self._infer_rule_confidence(match_score, score_breakdown)
+        confidence = rule_confidence
 
         reasoning = ""
         llm_provider = None
         llm_model = None
         try:
-            llm_result = await self.llm_service.generate_reasoning(
+            llm_result = await self.llm_service.generate_attribution(
+                match_id=match_id,
                 user_profile=user_profile,
                 entity_data=entity_data,
                 score_breakdown=score_breakdown,
-                strengths=strengths,
-                gaps=gaps,
+                match_score=match_score,
             )
-            reasoning = llm_result.get("content", "")
-            llm_provider = "openai" if not llm_result.get("fallback_used") else "anthropic"
+            reasoning = llm_result.get("reasoning", "")
+            llm_provider = llm_result.get("provider", "openai")
             llm_model = llm_result.get("model", "")
+            confidence = self._combine_confidence(rule_confidence, llm_result.get("confidence"))
+            strengths = self._merge_unique_items(strengths, llm_result.get("strengths", []))
+            gaps = self._merge_unique_items(gaps, llm_result.get("gaps", []))
+            recommendations = llm_result.get("recommendations") or self._generate_recommendations(gaps)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.warning("llm_reasoning_failed", error=str(exc))
             reasoning = self._fallback_reasoning(strengths, gaps, match_score)
             llm_provider = "rule_based"
-
-        recommendations = self._generate_recommendations(gaps)
+            recommendations = self._generate_recommendations(gaps)
 
         report_data = {
             "match_id": match_id,
@@ -103,12 +107,37 @@ class ExplainabilityService:
         return gaps
 
     @staticmethod
-    def _infer_confidence(score: float) -> str:
-        if score >= 75:
+    def _infer_rule_confidence(score: float, breakdown: dict[str, float]) -> str:
+        """Infer confidence from rule-based score consistency and data coverage."""
+        active_components = sum(1 for component_score in breakdown.values() if component_score > 0)
+        zero_components = sum(1 for component_score in breakdown.values() if component_score <= 0)
+
+        if score >= 75 and active_components >= 4 and zero_components <= 1:
             return "high"
-        if score >= 50:
+        if score >= 50 and active_components >= 3:
             return "medium"
         return "low"
+
+    @staticmethod
+    def _combine_confidence(rule_confidence: str, llm_confidence: Any) -> str:
+        """Combine deterministic and LLM confidence signals conservatively."""
+        ranking = {"low": 0, "medium": 1, "high": 2}
+        llm_confidence_str = str(llm_confidence or rule_confidence).lower()
+        llm_confidence_str = llm_confidence_str if llm_confidence_str in ranking else rule_confidence
+        final_rank = min(ranking[rule_confidence], ranking[llm_confidence_str])
+        return {value: key for key, value in ranking.items()}[final_rank]
+
+    @staticmethod
+    def _merge_unique_items(primary: list[str], secondary: list[str]) -> list[str]:
+        """Preserve order while merging rule-based and LLM-derived insights."""
+        seen: set[str] = set()
+        merged: list[str] = []
+        for item in [*primary, *secondary]:
+            normalized = item.strip()
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                merged.append(normalized)
+        return merged
 
     @staticmethod
     def _fallback_reasoning(strengths: list[str], gaps: list[str], score: float) -> str:
