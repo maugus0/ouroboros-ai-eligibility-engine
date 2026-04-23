@@ -1,0 +1,34 @@
+{
+  "case_id": "scholarship_case_strong_fit",
+  "scenario_type": "scholarship",
+  "description": "Eligible student strongly matches a leadership-oriented ASEAN scholarship.",
+  "user_profile": {
+    "gpa_normalized": 3.85,
+    "citizenship": "Indonesia",
+    "major": "Computer Science",
+    "degree_level": "masters",
+    "leadership_experience": true,
+    "community_service_hours": 120,
+    "financial_need_level": "high"
+  },
+  "entity_data": {
+    "entity_type": "scholarship",
+    "minimum_gpa": 3.5,
+    "eligible_citizenships": ["Indonesia", "Malaysia", "Thailand"],
+    "preferred_majors": ["Computer Science", "Artificial Intelligence"],
+    "requires_leadership": true,
+    "requires_community_service": true,
+    "funding_type": "full"
+  },
+  "score_breakdown": {
+    "eligibility": 40.0,
+    "preferred_criteria": 27.0,
+    "funding_coverage": 18.0,
+    "competition_estimate": 7.0
+  },
+  "expected": {
+    "overall_quality": "high",
+    "must_mention": ["indonesia", "leadership", "community service", "full funding"],
+    "must_not_claim": ["student is disqualified"]
+  }
+}

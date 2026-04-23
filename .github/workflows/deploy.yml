@@ -35,6 +35,99 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  prompt-lint:
+    name: Prompt Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dev dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run prompt lint tests
+        run: pytest tests/unit/test_prompt_lint.py -v --tb=short --junitxml=prompt-lint-junit.xml
+
+      - name: Upload prompt lint results
+        if: always() && hashFiles('prompt-lint-junit.xml') != ''
+        uses: actions/upload-artifact@v6
+        with:
+          name: prompt-lint-results
+          path: prompt-lint-junit.xml
+          retention-days: 7
+
+  prompt-diff-alert:
+    name: Prompt Diff Alert
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed prompt files
+        id: prompt_diff
+        run: |
+          CHANGED=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" -- prompts/*.json || true)
+          {
+            echo "changed<<EOF"
+            echo "$CHANGED"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Add or update PR comment
+        if: steps.prompt_diff.outputs.changed != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- prompt-diff-alert -->';
+            const changed = `${{ steps.prompt_diff.outputs.changed }}`.trim().split('\n').filter(Boolean);
+            const body = `${marker}
+
+            Prompt files changed in this PR:
+
+            ${changed.map(file => `- \`${file}\``).join('\n')}
+
+            CI will run prompt lint on this PR, and full LLM evaluation will run on main pushes.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(comment => comment.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
   format-check:
     name: Code Formatting (Black & isort)
     runs-on: ubuntu-latest
@@ -136,7 +229,7 @@ jobs:
   type-check:
     name: Type Checking (mypy)
     runs-on: ubuntu-latest
-    needs: [format-check, lint-check, unit-tests]
+    needs: [prompt-lint, format-check, lint-check, unit-tests]
     permissions:
       contents: read
     steps:
@@ -161,7 +254,7 @@ jobs:
   integration-tests:
     name: Tests with Coverage
     runs-on: ubuntu-latest
-    needs: [format-check, lint-check, unit-tests]
+    needs: [prompt-lint, format-check, lint-check, unit-tests]
     permissions:
       contents: read
     steps:
@@ -214,7 +307,7 @@ jobs:
   security-static:
     name: Security Scan (Bandit)
     runs-on: ubuntu-latest
-    needs: [format-check, lint-check, unit-tests]
+    needs: [prompt-lint, format-check, lint-check, unit-tests]
     permissions:
       contents: read
     steps:
@@ -247,7 +340,7 @@ jobs:
   security-scan:
     name: Security Scan (Snyk OSS)
     runs-on: ubuntu-latest
-    needs: [format-check, lint-check, unit-tests]
+    needs: [prompt-lint, format-check, lint-check, unit-tests]
     env:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     permissions:
@@ -309,6 +402,7 @@ jobs:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs:
+      - prompt-lint
       - type-check
       - integration-tests
       - security-static
@@ -400,10 +494,61 @@ jobs:
           path: trivy-results.json
           retention-days: 7
 
+  llm-eval:
+    name: LLM Eval
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [prompt-lint, integration-tests]
+    permissions:
+      contents: read
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LLM_EVAL_BASELINE_SCORE: ${{ vars.ELIGIBILITY_LLM_EVAL_BASELINE_SCORE }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run LLM evaluation
+        env:
+          OPENAI_API_KEY: ${{ env.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is required for llm-eval" >&2
+            exit 1
+          fi
+
+          if [ -n "$LLM_EVAL_BASELINE_SCORE" ]; then
+            python scripts/run_llm_eval.py --baseline-score "$LLM_EVAL_BASELINE_SCORE" --output eval_results.json
+          else
+            python scripts/run_llm_eval.py --output eval_results.json
+          fi
+
+      - name: Upload eval results
+        if: always() && hashFiles('eval_results.json') != ''
+        uses: actions/upload-artifact@v6
+        with:
+          name: llm-eval-results
+          path: eval_results.json
+          retention-days: 7
+
   reports-summary:
     name: CI/CD Summary
     runs-on: ubuntu-latest
     needs:
+      - prompt-lint
+      - prompt-diff-alert
       - format-check
       - lint-check
       - unit-tests
@@ -413,6 +558,7 @@ jobs:
       - security-scan
       - docker-build
       - trivy-scan
+      - llm-eval
     if: always()
     permissions:
       contents: read
@@ -424,6 +570,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Prompt Lint | ${{ needs.prompt-lint.result == 'success' && 'Passed' || needs.prompt-lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Prompt Diff Alert | ${{ needs.prompt-diff-alert.result == 'success' && 'Passed' || needs.prompt-diff-alert.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Format | ${{ needs.format-check.result == 'success' && 'Passed' || needs.format-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Lint | ${{ needs.lint-check.result == 'success' && 'Passed' || needs.lint-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && 'Passed' || needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
@@ -433,3 +581,4 @@ jobs:
           echo "| Security Scan (Snyk) | ${{ needs.security-scan.result == 'success' && 'Passed' || needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Docker Build/Push | ${{ needs.docker-build.result == 'success' && 'Passed' || needs.docker-build.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Trivy Scan | ${{ needs.trivy-scan.result == 'success' && 'Passed' || needs.trivy-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| LLM Eval | ${{ needs.llm-eval.result == 'success' && 'Passed' || needs.llm-eval.result }} |" >> $GITHUB_STEP_SUMMARY

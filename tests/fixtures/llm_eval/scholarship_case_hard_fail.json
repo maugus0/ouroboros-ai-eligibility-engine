@@ -1,0 +1,31 @@
+{
+  "case_id": "scholarship_case_hard_fail",
+  "scenario_type": "scholarship",
+  "description": "Student misses a hard citizenship rule for the scholarship.",
+  "user_profile": {
+    "gpa_normalized": 3.9,
+    "citizenship": "India",
+    "major": "Computer Science",
+    "degree_level": "masters",
+    "leadership_experience": true,
+    "community_service_hours": 80
+  },
+  "entity_data": {
+    "entity_type": "scholarship",
+    "minimum_gpa": 3.5,
+    "eligible_citizenships": ["Indonesia", "Malaysia", "Thailand"],
+    "preferred_majors": ["Computer Science"],
+    "requires_leadership": true
+  },
+  "score_breakdown": {
+    "eligibility": 10.0,
+    "preferred_criteria": 20.0,
+    "funding_coverage": 8.0,
+    "competition_estimate": 4.0
+  },
+  "expected": {
+    "overall_quality": "low",
+    "must_mention": ["citizenship", "not eligible", "hard criteria"],
+    "must_not_claim": ["student fully qualifies"]
+  }
+}
