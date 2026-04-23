@@ -1,5 +1,6 @@
 """Orchestrates program and scholarship matching evaluations."""
 
+import asyncio
 import time
 from typing import Any, Optional
 
@@ -20,6 +21,8 @@ logger = get_logger(__name__)
 
 class MatchingService:
     """Top-level service that orchestrates the full evaluation pipeline."""
+
+    _BATCH_EVALUATION_CONCURRENCY = 4
 
     def __init__(self):
         self.match_repo = MatchResultRepository()
@@ -68,7 +71,11 @@ class MatchingService:
             "match_score": round(total_score, 2),
             "score_breakdown": breakdown,
             "confidence_level": confidence,
-            "llm_model_used": research_alignment.get("model") if research_alignment else None,
+            "llm_model_used": (
+                research_alignment.get("model")
+                if research_alignment and not research_alignment.get("fallback_used", False)
+                else None
+            ),
             "llm_fallback_used": research_alignment.get("fallback_used", False) if research_alignment else False,
             "total_processing_time_ms": elapsed_ms,
         }
@@ -98,6 +105,7 @@ class MatchingService:
                 entity_data=entity_data,
                 score_breakdown=breakdown,
                 match_score=total_score,
+                score_metadata=metadata,
             )
             result["attribution_report"] = attribution
             if attribution and attribution.get("llm_model") and not match_result.get("llm_model_used"):
@@ -118,6 +126,45 @@ class MatchingService:
         )
 
         return result
+
+    async def evaluate_batch(
+        self,
+        user_id: str,
+        user_profile: dict[str, Any],
+        evaluations: list[dict[str, Any]],
+        include_attribution: bool = True,
+    ) -> dict[str, Any]:
+        """Evaluate multiple entities with bounded concurrency while preserving input order."""
+        semaphore = asyncio.Semaphore(self._BATCH_EVALUATION_CONCURRENCY)
+
+        async def run_evaluation(index: int, evaluation: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+            item_include_attribution = evaluation.get("include_attribution")
+            async with semaphore:
+                result = await self.evaluate(
+                    user_id=user_id,
+                    entity_type=str(evaluation["entity_type"]),
+                    entity_id=evaluation["entity_id"],
+                    user_profile=user_profile,
+                    entity_data=evaluation["entity_data"],
+                    include_attribution=(
+                        item_include_attribution if item_include_attribution is not None else include_attribution
+                    ),
+                )
+            return index, {
+                "entity_type": str(evaluation["entity_type"]),
+                "entity_id": evaluation["entity_id"],
+                **result,
+            }
+
+        indexed_results = await asyncio.gather(
+            *(run_evaluation(index, evaluation) for index, evaluation in enumerate(evaluations))
+        )
+        results = [result for _, result in sorted(indexed_results, key=lambda item: item[0])]
+
+        return {
+            "count": len(results),
+            "results": results,
+        }
 
     async def get_results_by_user(
         self,
@@ -182,6 +229,7 @@ class MatchingService:
                     "similarity": similarity,
                     "provider": "pgvector_fallback",
                     "model": None,
+                    "embedding_model": settings.OPENAI_EMBEDDING_MODEL,
                     "fallback_used": True,
                     "alignment_summary": "Fallback vector similarity used after LLM alignment failed.",
                 }

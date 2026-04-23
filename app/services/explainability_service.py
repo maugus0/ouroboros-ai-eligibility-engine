@@ -23,12 +23,14 @@ class ExplainabilityService:
         entity_data: dict[str, Any],
         score_breakdown: dict[str, float],
         match_score: float,
+        score_metadata: Optional[dict[str, Any]] = None,
     ) -> Optional[dict[str, Any]]:
         """Generate and persist an attribution report.
 
         Uses rule-based analysis for strengths/gaps, and LLM for reasoning narrative.
         """
         strengths = self._extract_strengths(score_breakdown, match_score)
+        gaps = self._extract_gaps(score_breakdown, user_profile, entity_data, score_metadata)
         gaps = self._extract_gaps(score_breakdown, user_profile, entity_data)
         rule_confidence = self._infer_rule_confidence(match_score, score_breakdown)
         confidence = rule_confidence
@@ -91,8 +93,13 @@ class ExplainabilityService:
         breakdown: dict[str, float],
         user_profile: dict[str, Any],
         entity_data: dict[str, Any],
+        score_metadata: Optional[dict[str, Any]] = None,
     ) -> list[str]:
         """Identify weaknesses and missing requirements."""
+        mandatory_failure_gaps = ExplainabilityService._extract_mandatory_failure_gaps(score_metadata)
+        if mandatory_failure_gaps:
+            return mandatory_failure_gaps
+
         gaps = []
         for component, score in breakdown.items():
             if score < 5.0:
@@ -105,6 +112,20 @@ class ExplainabilityService:
                 gaps.append(f"Missing prerequisite: {prereq}")
 
         return gaps
+
+    @staticmethod
+    def _extract_mandatory_failure_gaps(score_metadata: Optional[dict[str, Any]] = None) -> list[str]:
+        """Extract specific mandatory-eligibility failure reasons for scholarship matches."""
+        if not score_metadata:
+            return []
+
+        eligibility_meta = score_metadata.get("eligibility") or {}
+        if eligibility_meta.get("mandatory_passed", True):
+            return []
+
+        failures = eligibility_meta.get("failed_criteria", [])
+        failure_messages = [failure.get("message", "").strip() for failure in failures if isinstance(failure, dict)]
+        return [message for message in failure_messages if message]
 
     @staticmethod
     def _infer_rule_confidence(score: float, breakdown: dict[str, float]) -> str:

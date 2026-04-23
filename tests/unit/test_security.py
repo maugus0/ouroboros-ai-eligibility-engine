@@ -12,6 +12,16 @@ def test_missing_service_token():
     assert response.status_code == 401
 
 
+def test_missing_service_token_on_internal_evaluate():
+    response = client.post("/api/v1/eligibility/evaluate", json={"user_id": "test"})
+    assert response.status_code == 401
+
+
+def test_missing_service_token_on_batch_evaluate():
+    response = client.post("/api/v1/eligibility/evaluate/batch", json={"user_id": "test"})
+    assert response.status_code == 401
+
+
 def test_invalid_service_token():
     response = client.post(
         "/matching/evaluate",
