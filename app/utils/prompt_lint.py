@@ -101,21 +101,17 @@ def sample_prompt_context(filename: str) -> dict[str, Any]:
     return contexts.get(filename, {})
 
 
-def lint_prompt_file(filename: str, *, token_limit: Optional[int] = None) -> PromptLintResult:
-    """Validate prompt JSON structure, placeholders, and representative token usage."""
+def _validate_prompt_template_structure(template: dict[str, Any]) -> tuple[list[str], Optional[dict[str, Any]]]:
     issues: list[str] = []
-    limit = token_limit or _DEFAULT_TOKEN_LIMIT
-    template = load_prompt_template(filename)
-
     prompt_template = template.get("prompt_template")
     if not isinstance(prompt_template, dict):
         issues.append("missing `prompt_template` object")
-        return PromptLintResult(filename, False, issues, 0, 0)
+        return issues, None
 
     base = prompt_template.get("base")
     if not isinstance(base, dict):
         issues.append("missing `prompt_template.base` object")
-        return PromptLintResult(filename, False, issues, 0, 0)
+        return issues, None
 
     if not isinstance(base.get("agent_identity"), dict):
         issues.append("missing `agent_identity` section")
@@ -126,38 +122,78 @@ def lint_prompt_file(filename: str, *, token_limit: Optional[int] = None) -> Pro
     if not isinstance(output_format, dict):
         issues.append("missing `output_format` section")
     else:
-        fmt = output_format.get("format")
-        if fmt not in {"json", "text"}:
-            issues.append(f"unsupported output format {fmt!r}")
-        schema = output_format.get("schema")
-        if not isinstance(schema, dict):
-            issues.append("missing `output_format.schema` object")
+        _validate_output_format(output_format, issues)
 
     constraints = base.get("constraints")
     if not isinstance(constraints, list) or not constraints:
         issues.append("constraints must be a non-empty list")
 
+    return issues, base
+
+
+def _validate_output_format(output_format: dict[str, Any], issues: list[str]) -> None:
+    fmt = output_format.get("format")
+    if fmt not in {"json", "text"}:
+        issues.append(f"unsupported output format {fmt!r}")
+    schema = output_format.get("schema")
+    if not isinstance(schema, dict):
+        issues.append("missing `output_format.schema` object")
+
+
+def _collect_placeholder_issues(
+    filename: str,
+    template: dict[str, Any],
+    *,
+    token_limit: int,
+) -> tuple[list[str], int, int]:
+    issues: list[str] = []
     raw_json = json.dumps(template, ensure_ascii=False)
     unresolved = sorted(set(_UNRESOLVED_PLACEHOLDER_PATTERN.findall(raw_json)))
     if unresolved:
         issues.append(f"unresolved placeholders found: {', '.join(unresolved)}")
 
-    context = sample_prompt_context(filename)
-    built_json = build_prompt_json(filename, context)
-    built_text = build_prompt_text(filename, context)
-
-    built_unresolved = sorted(
-        set(_UNRESOLVED_PLACEHOLDER_PATTERN.findall(f"{built_json}\n{built_text}"))
-    )
+    built_json, built_text = _build_prompt_variants(filename)
+    built_unresolved = sorted(set(_UNRESOLVED_PLACEHOLDER_PATTERN.findall(f"{built_json}\n{built_text}")))
     if built_unresolved:
         issues.append(f"built prompt contains unresolved placeholders: {', '.join(built_unresolved)}")
 
-    json_token_count = count_tokens_for_model(built_json)
-    text_token_count = count_tokens_for_model(built_text)
-    if json_token_count > limit:
-        issues.append(f"JSON prompt uses {json_token_count} tokens, above limit {limit}")
-    if text_token_count > limit:
-        issues.append(f"text prompt uses {text_token_count} tokens, above limit {limit}")
+    json_token_count, text_token_count = _count_variant_tokens(built_json, built_text)
+    issues.extend(_token_limit_issues(json_token_count, text_token_count, token_limit))
+    return issues, json_token_count, text_token_count
+
+
+def _build_prompt_variants(filename: str) -> tuple[str, str]:
+    context = sample_prompt_context(filename)
+    return build_prompt_json(filename, context), build_prompt_text(filename, context)
+
+
+def _count_variant_tokens(built_json: str, built_text: str) -> tuple[int, int]:
+    return count_tokens_for_model(built_json), count_tokens_for_model(built_text)
+
+
+def _token_limit_issues(json_token_count: int, text_token_count: int, token_limit: int) -> list[str]:
+    issues: list[str] = []
+    if json_token_count > token_limit:
+        issues.append(f"JSON prompt uses {json_token_count} tokens, above limit {token_limit}")
+    if text_token_count > token_limit:
+        issues.append(f"text prompt uses {text_token_count} tokens, above limit {token_limit}")
+    return issues
+
+
+def lint_prompt_file(filename: str, *, token_limit: Optional[int] = None) -> PromptLintResult:
+    """Validate prompt JSON structure, placeholders, and representative token usage."""
+    limit = token_limit or _DEFAULT_TOKEN_LIMIT
+    template = load_prompt_template(filename)
+    structure_issues, base = _validate_prompt_template_structure(template)
+    if base is None:
+        return PromptLintResult(filename, False, structure_issues, 0, 0)
+
+    placeholder_issues, json_token_count, text_token_count = _collect_placeholder_issues(
+        filename,
+        template,
+        token_limit=limit,
+    )
+    issues = [*structure_issues, *placeholder_issues]
 
     return PromptLintResult(
         filename=filename,

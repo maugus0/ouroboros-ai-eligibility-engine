@@ -208,17 +208,19 @@ async def _main() -> int:
     results = await _run_eval(args.fixture_dir, args.baseline_score)
     args.output.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(json.dumps(
-        {
-            "overall_score": results["overall_score"],
-            "baseline_score": results["baseline_score"],
-            "failure_threshold": results["failure_threshold"],
-            "passed": results["passed"],
-            "output": str(args.output),
-        },
-        ensure_ascii=False,
-        indent=2,
-    ))
+    print(
+        json.dumps(
+            {
+                "overall_score": results["overall_score"],
+                "baseline_score": results["baseline_score"],
+                "failure_threshold": results["failure_threshold"],
+                "passed": results["passed"],
+                "output": str(args.output),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     return 0 if results["passed"] else 1
 
 

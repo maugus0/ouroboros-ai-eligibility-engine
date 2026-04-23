@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 
-
 FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "llm_eval"
 
 
