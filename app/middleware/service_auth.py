@@ -2,7 +2,7 @@
 
 import json
 import time
-from typing import Any, cast
+from typing import Any, Optional, cast
 
 import httpx
 import jwt
@@ -32,7 +32,7 @@ async def require_service_token(request: Request) -> None:
     raise HTTPException(status_code=401, detail="Internal bearer token missing or invalid")
 
 
-async def _decode_internal_service_token(authorization: str | None) -> dict | None:
+async def _decode_internal_service_token(authorization: Optional[str]) -> Optional[dict]:
     if not authorization or not authorization.startswith("Bearer "):
         return None
 
@@ -66,7 +66,7 @@ def _normalize_key(raw_value: str) -> str:
     return value
 
 
-def _decode_jwks_key(jwk: dict) -> object | None:
+def _decode_jwks_key(jwk: dict) -> Optional[object]:
     try:
         return PyJWK.from_json(json.dumps(jwk)).key
     except Exception as exc:  # pylint: disable=broad-exception-caught
@@ -86,7 +86,7 @@ def _extract_keys_from_jwks(jwks_payload: dict) -> dict[str, object]:
     return result
 
 
-def _resolve_configured_public_key_by_kid(kid: str | None) -> str | None:
+def _resolve_configured_public_key_by_kid(kid: Optional[str]) -> Optional[str]:
     if not kid:
         return None
 
@@ -108,7 +108,7 @@ async def _fetch_jwks_keys(jwks_url: str) -> dict[str, object]:
     return _extract_keys_from_jwks(payload)
 
 
-async def _resolve_jwks_key(jwks_url: str, kid: str) -> object | None:
+async def _resolve_jwks_key(jwks_url: str, kid: str) -> Optional[object]:
     now = time.time()
     cache = _jwks_cache_by_url.get(jwks_url)
     if cache and cache.get("expires_at", 0) > now:
@@ -127,7 +127,7 @@ async def _resolve_jwks_key(jwks_url: str, kid: str) -> object | None:
     return fetched_keys.get(kid)
 
 
-async def _resolve_internal_token_verification_key(token: str) -> object | str | None:
+async def _resolve_internal_token_verification_key(token: str) -> Optional[Any]:
     try:
         token_header = jwt.get_unverified_header(token)
     except Exception:  # pylint: disable=broad-exception-caught
@@ -135,7 +135,7 @@ async def _resolve_internal_token_verification_key(token: str) -> object | str |
 
     kid = token_header.get("kid")
     algorithm = str(settings.INTERNAL_TOKEN_SIGNING_ALGORITHM or "").upper()
-    resolved_key: object | str | None = None
+    resolved_key: Optional[Any] = None
 
     if algorithm.startswith("HS"):
         if settings.INTERNAL_TOKEN_PUBLIC_KEY:
