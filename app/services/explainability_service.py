@@ -31,6 +31,7 @@ class ExplainabilityService:
         """
         strengths = self._extract_strengths(score_breakdown, match_score)
         gaps = self._extract_gaps(score_breakdown, user_profile, entity_data, score_metadata)
+        gaps = self._extract_gaps(score_breakdown, user_profile, entity_data)
         rule_confidence = self._infer_rule_confidence(match_score, score_breakdown)
         confidence = rule_confidence
 
