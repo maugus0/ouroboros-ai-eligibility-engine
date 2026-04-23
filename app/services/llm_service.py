@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 
 def _coerce_string_list(value: Any) -> list[str]:
-    """Return a string list only when the payload field is already a list."""
+    """Return a string list only when the provider returns an actual list."""
     if isinstance(value, list):
         return [str(item) for item in value]
     return []

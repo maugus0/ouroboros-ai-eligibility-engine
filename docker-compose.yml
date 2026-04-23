@@ -31,7 +31,11 @@ services:
       - DB_USERNAME=${DB_USERNAME:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-root_password}
       - ALLOW_DB_FAILURE=false
-      - X_SERVICE_TOKEN=${X_SERVICE_TOKEN:-dev-service-token}
+      - INTERNAL_TOKEN_VERIFY_ENABLED=${INTERNAL_TOKEN_VERIFY_ENABLED:-false}
+      - INTERNAL_TOKEN_SIGNING_ALGORITHM=${INTERNAL_TOKEN_SIGNING_ALGORITHM:-RS256}
+      - INTERNAL_TOKEN_PUBLIC_KEY=${INTERNAL_TOKEN_PUBLIC_KEY:-internal-test-signing-key-with-32-bytes}
+      - INTERNAL_TOKEN_ISSUER=${INTERNAL_TOKEN_ISSUER:-ouroboros-orchestrator-internal}
+      - INTERNAL_TOKEN_AUDIENCE=${INTERNAL_TOKEN_AUDIENCE:-ouroboros.eligibility-engine}
       - LOG_LEVEL=DEBUG
     volumes:
       - .:/app
