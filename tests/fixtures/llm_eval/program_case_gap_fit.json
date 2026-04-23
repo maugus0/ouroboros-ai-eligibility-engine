@@ -1,0 +1,31 @@
+{
+  "case_id": "program_case_gap_fit",
+  "scenario_type": "program",
+  "description": "Applicant has strong interest match but misses a required course.",
+  "user_profile": {
+    "gpa_normalized": 3.4,
+    "major": "Information Systems",
+    "technical_skills": ["Python", "Data Analysis"],
+    "completed_courses": ["Algorithms"],
+    "research_interests": "Data systems and applied AI"
+  },
+  "entity_data": {
+    "entity_type": "program",
+    "minimum_gpa": 3.3,
+    "keywords": ["Data Systems", "Applied AI"],
+    "prerequisites": ["Algorithms", "Statistics"],
+    "research_focus": ["Applied AI", "Distributed Systems"]
+  },
+  "score_breakdown": {
+    "gpa": 16.0,
+    "relevance": 24.0,
+    "prerequisites": 12.0,
+    "research_alignment": 11.0,
+    "practical_factors": 7.0
+  },
+  "expected": {
+    "overall_quality": "medium",
+    "must_mention": ["statistics", "prerequisite", "applied ai"],
+    "must_not_claim": ["all prerequisites are complete"]
+  }
+}

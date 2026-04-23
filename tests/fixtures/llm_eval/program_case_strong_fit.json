@@ -1,0 +1,33 @@
+{
+  "case_id": "program_case_strong_fit",
+  "scenario_type": "program",
+  "description": "High-GPA CS applicant aligns strongly with an AI-focused master's programme.",
+  "user_profile": {
+    "gpa_normalized": 3.9,
+    "major": "Computer Science",
+    "technical_skills": ["Python", "Machine Learning", "NLP"],
+    "completed_courses": ["Algorithms", "Statistics", "Machine Learning"],
+    "research_interests": "Natural language processing and trustworthy AI",
+    "leadership_experience": true
+  },
+  "entity_data": {
+    "entity_type": "program",
+    "minimum_gpa": 3.5,
+    "keywords": ["Machine Learning", "Artificial Intelligence", "NLP"],
+    "prerequisites": ["Algorithms", "Statistics"],
+    "research_focus": ["NLP", "Trustworthy AI"],
+    "location": "Singapore"
+  },
+  "score_breakdown": {
+    "gpa": 20.0,
+    "relevance": 28.0,
+    "prerequisites": 24.0,
+    "research_alignment": 14.0,
+    "practical_factors": 8.0
+  },
+  "expected": {
+    "overall_quality": "high",
+    "must_mention": ["high gpa", "nlp", "algorithms", "statistics"],
+    "must_not_claim": ["student is ineligible", "missing all prerequisites"]
+  }
+}
