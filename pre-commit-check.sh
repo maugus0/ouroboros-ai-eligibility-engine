@@ -86,11 +86,11 @@ fi
 
 echo ""
 echo "6. Running tests..."
-if ALLOW_DB_FAILURE=true USE_MOCK_DATA=true X_SERVICE_TOKEN=test-service-token pytest tests/ -v --tb=short > /dev/null 2>&1; then
+if ALLOW_DB_FAILURE=true USE_MOCK_DATA=true INTERNAL_TOKEN_VERIFY_ENABLED=true INTERNAL_TOKEN_SIGNING_ALGORITHM=HS256 INTERNAL_TOKEN_PUBLIC_KEY=internal-test-signing-key-with-32-bytes INTERNAL_TOKEN_ISSUER=ouroboros-orchestrator-internal INTERNAL_TOKEN_AUDIENCE=ouroboros.eligibility-engine pytest tests/ -v --tb=short > /dev/null 2>&1; then
     success "Tests passed"
 else
     error "Tests failed"
-    ALLOW_DB_FAILURE=true USE_MOCK_DATA=true X_SERVICE_TOKEN=test-service-token pytest tests/ -v --tb=short
+    ALLOW_DB_FAILURE=true USE_MOCK_DATA=true INTERNAL_TOKEN_VERIFY_ENABLED=true INTERNAL_TOKEN_SIGNING_ALGORITHM=HS256 INTERNAL_TOKEN_PUBLIC_KEY=internal-test-signing-key-with-32-bytes INTERNAL_TOKEN_ISSUER=ouroboros-orchestrator-internal INTERNAL_TOKEN_AUDIENCE=ouroboros.eligibility-engine pytest tests/ -v --tb=short
     exit 1
 fi
 
