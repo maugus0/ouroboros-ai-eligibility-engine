@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 def _coerce_string_list(value: Any) -> list[str]:
     """Return a list of strings without splitting scalar strings into characters."""
     if isinstance(value, list):
-        return [str(item) for item in value]
+        return [str(item).strip() for item in value if str(item).strip()]
     if isinstance(value, str):
         stripped = value.strip()
         return [stripped] if stripped else []

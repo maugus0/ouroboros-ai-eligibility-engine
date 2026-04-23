@@ -1,17 +1,9 @@
-"""Generate a secure X-Service-Token for inter-service authentication."""
+"""Deprecated helper.
 
-import secrets
-import sys
-
-
-def generate_token(length: int = 64) -> str:
-    """Generate a cryptographically secure token."""
-    return secrets.token_urlsafe(length)
-
+X-Service-Token auth has been removed. Use the internal bearer-token settings
+in `.env` instead: INTERNAL_TOKEN_VERIFY_ENABLED, INTERNAL_TOKEN_SIGNING_ALGORITHM,
+INTERNAL_TOKEN_PUBLIC_KEY, INTERNAL_TOKEN_ISSUER, and INTERNAL_TOKEN_AUDIENCE.
+"""
 
 if __name__ == "__main__":
-    token_length = int(sys.argv[1]) if len(sys.argv) > 1 else 64
-    token = generate_token(token_length)
-    print(f"Generated X-Service-Token:\n{token}")
-    print(f"\nAdd to your .env file:")
-    print(f"X_SERVICE_TOKEN={token}")
+    print("X-Service-Token auth has been removed. Configure internal bearer-token settings in .env instead.")

@@ -7,7 +7,11 @@ import os
 
 def test_settings_load():
     os.environ.setdefault("ALLOW_DB_FAILURE", "true")
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
+    os.environ.setdefault("INTERNAL_TOKEN_VERIFY_ENABLED", "true")
+    os.environ.setdefault("INTERNAL_TOKEN_SIGNING_ALGORITHM", "HS256")
+    os.environ.setdefault("INTERNAL_TOKEN_PUBLIC_KEY", "internal-test-signing-key-with-32-bytes")
+    os.environ.setdefault("INTERNAL_TOKEN_ISSUER", "ouroboros-orchestrator-internal")
+    os.environ.setdefault("INTERNAL_TOKEN_AUDIENCE", "ouroboros.eligibility-engine")
 
     from app.config import settings
 
@@ -19,7 +23,11 @@ def test_settings_load():
 
 def test_settings_db_helpers():
     os.environ.setdefault("ALLOW_DB_FAILURE", "true")
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
+    os.environ.setdefault("INTERNAL_TOKEN_VERIFY_ENABLED", "true")
+    os.environ.setdefault("INTERNAL_TOKEN_SIGNING_ALGORITHM", "HS256")
+    os.environ.setdefault("INTERNAL_TOKEN_PUBLIC_KEY", "internal-test-signing-key-with-32-bytes")
+    os.environ.setdefault("INTERNAL_TOKEN_ISSUER", "ouroboros-orchestrator-internal")
+    os.environ.setdefault("INTERNAL_TOKEN_AUDIENCE", "ouroboros.eligibility-engine")
 
     from app.config import settings
 
@@ -51,7 +59,7 @@ def test_db_helpers_prefer_db_prefix_over_postgres_prefix(monkeypatch):
 
 
 def test_scoring_weight_defaults():
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
+    os.environ.setdefault("INTERNAL_TOKEN_VERIFY_ENABLED", "true")
     from app.config import settings
 
     program_sum = (
@@ -73,7 +81,7 @@ def test_scoring_weight_defaults():
 
 
 def test_vector_search_settings():
-    os.environ.setdefault("X_SERVICE_TOKEN", "test-service-token")
+    os.environ.setdefault("INTERNAL_TOKEN_VERIFY_ENABLED", "true")
     from app.config import settings
 
     assert settings.EMBEDDING_DIMENSION == 1536
