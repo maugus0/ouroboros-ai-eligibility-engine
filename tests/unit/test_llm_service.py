@@ -54,8 +54,8 @@ def test_parse_research_alignment_response_wraps_scalar_strings_for_list_fields(
 
 def test_parse_attribution_response_wraps_scalar_strings_for_strengths_and_gaps():
     parsed = LLMPipelineService._parse_attribution_response(  # pylint: disable=protected-access
-        '{"strengths": "Strong GPA", "gaps": "Needs more research", "reasoning": "Test"}'
+        '{"strengths": "Strong NLP fit", "gaps": "Limited publications", "reasoning": "Promising"}'
     )
 
-    assert parsed["strengths"] == ["Strong GPA"]
-    assert parsed["gaps"] == ["Needs more research"]
+    assert parsed["strengths"] == ["Strong NLP fit"]
+    assert parsed["gaps"] == ["Limited publications"]

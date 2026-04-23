@@ -8,7 +8,7 @@ from app.services.matching_service import MatchingService
 client = TestClient(app)
 
 
-def test_internal_evaluate_alias_supports_single_request(service_token_header, monkeypatch):
+def test_internal_evaluate_alias_supports_single_request(internal_token_header, monkeypatch):
     async def fake_evaluate(
         _self,
         user_id: str,
@@ -33,7 +33,7 @@ def test_internal_evaluate_alias_supports_single_request(service_token_header, m
 
     response = client.post(
         "/api/v1/eligibility/evaluate",
-        headers=service_token_header,
+        headers=internal_token_header,
         json={
             "user_id": "user-1",
             "entity_type": "scholarship",
@@ -52,7 +52,7 @@ def test_internal_evaluate_alias_supports_single_request(service_token_header, m
     assert body["data"]["match_result"]["entity_id"] == "scholarship-1"
 
 
-def test_internal_evaluate_alias_supports_batch_request(service_token_header, monkeypatch):
+def test_internal_evaluate_alias_supports_batch_request(internal_token_header, monkeypatch):
     async def fake_evaluate_batch(
         _self,
         user_id: str,
@@ -83,7 +83,7 @@ def test_internal_evaluate_alias_supports_batch_request(service_token_header, mo
 
     response = client.post(
         "/api/v1/eligibility/evaluate/batch",
-        headers=service_token_header,
+        headers=internal_token_header,
         json={
             "user_id": "user-1",
             "user_profile": {"gpa_normalized": 3.8},
