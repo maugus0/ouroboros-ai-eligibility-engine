@@ -53,6 +53,6 @@ def internal_token_header():
 
 
 @pytest.fixture
-def service_token_header(internal_token_header):
+def service_token_header(request):
     """Backward-compatible alias for tests still using the legacy fixture name."""
-    return internal_token_header
+    return request.getfixturevalue("internal_token_header")
