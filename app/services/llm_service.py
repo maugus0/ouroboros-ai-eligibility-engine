@@ -182,15 +182,11 @@ class LLMPipelineService:
 
         parsed["score"] = max(0.0, min(100.0, score))
         parsed["alignment_summary"] = str(parsed.get("alignment_summary", "")).strip()
-        parsed["overlapping_themes"] = LLMPipelineService._coerce_string_list(
-            parsed.get("overlapping_themes")
-        )
+        parsed["overlapping_themes"] = LLMPipelineService._coerce_string_list(parsed.get("overlapping_themes"))
         parsed["unique_student_interests"] = LLMPipelineService._coerce_string_list(
             parsed.get("unique_student_interests")
         )
-        parsed["recommended_faculty"] = LLMPipelineService._coerce_string_list(
-            parsed.get("recommended_faculty")
-        )
+        parsed["recommended_faculty"] = LLMPipelineService._coerce_string_list(parsed.get("recommended_faculty"))
         parsed["confidence"] = str(parsed.get("confidence", "medium")).lower()
         return parsed
 
