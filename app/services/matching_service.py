@@ -97,6 +97,7 @@ class MatchingService:
             )
 
         result: dict[str, Any] = {"match_result": match_result}
+        attribution: Optional[dict[str, Any]] = None
 
         if include_attribution and match_result:
             attribution = await self.explainability_service.generate_report(
@@ -114,6 +115,16 @@ class MatchingService:
                     attribution["llm_model"],
                     match_result["id"],
                 )
+
+        result["agent_reasoning"] = self._build_agent_reasoning(
+            entity_type=entity_type,
+            total_score=total_score,
+            breakdown=breakdown,
+            metadata=metadata,
+            confidence=confidence,
+            include_attribution=include_attribution,
+            attribution=attribution,
+        )
 
         logger.info(
             "evaluation_complete",
@@ -327,3 +338,97 @@ class MatchingService:
         if vector_score <= 0.0:
             return llm_score
         return (vector_score * 0.4) + (llm_score * 0.6)
+
+    @classmethod
+    def _build_agent_reasoning(
+        cls,
+        *,
+        entity_type: str,
+        total_score: float,
+        breakdown: dict[str, float],
+        metadata: dict[str, Any],
+        confidence: str,
+        include_attribution: bool,
+        attribution: Optional[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Build deterministic agent_reasoning metadata for match evaluations."""
+        decision_factors: list[str] = [
+            f"Computed {entity_type} match score {round(total_score, 2)}/100 with confidence {confidence}.",
+            cls._build_top_contributors_factor(breakdown),
+        ]
+
+        mandatory_failure_message = cls._get_mandatory_failure_message(metadata)
+        if mandatory_failure_message:
+            decision_factors.append(f"Mandatory eligibility gate failed: {mandatory_failure_message}")
+
+        if include_attribution:
+            if isinstance(attribution, dict):
+                provider = attribution.get("llm_provider") or "unknown"
+                model = attribution.get("llm_model") or "rule_based"
+                decision_factors.append(f"Attribution generated via {provider} ({model}).")
+            else:
+                decision_factors.append("Attribution was requested but could not be generated.")
+        else:
+            decision_factors.append("Attribution generation was disabled for this evaluation.")
+
+        next_field = cls._derive_next_action(attribution)
+
+        return {
+            "approach": """Compute weighted eligibility scores,
+                    persist historical evidence, and optionally generate explainability.""",
+            "decision_factors": decision_factors,
+            "next_field": next_field,
+            "confidence": cls._confidence_to_numeric(confidence),
+        }
+
+    @staticmethod
+    def _build_top_contributors_factor(breakdown: dict[str, float]) -> str:
+        sorted_components = sorted(breakdown.items(), key=lambda item: item[1], reverse=True)
+        contributors = [
+            f"{component.replace('_', ' ')}={round(score, 2)}" for component, score in sorted_components if score > 0
+        ][:3]
+        if not contributors:
+            return "No positive scoring contributors were identified."
+        return "Top scoring contributors: " + ", ".join(contributors) + "."
+
+    @staticmethod
+    def _get_mandatory_failure_message(metadata: dict[str, Any]) -> Optional[str]:
+        eligibility_meta = metadata.get("eligibility") if isinstance(metadata, dict) else None
+        if not isinstance(eligibility_meta, dict):
+            return None
+        if eligibility_meta.get("mandatory_passed", True):
+            return None
+        failed = eligibility_meta.get("failed_criteria")
+        if not isinstance(failed, list):
+            return "One or more mandatory eligibility criteria were not met."
+        for item in failed:
+            if isinstance(item, dict):
+                message = str(item.get("message") or "").strip()
+                if message:
+                    return message
+        return "One or more mandatory eligibility criteria were not met."
+
+    @staticmethod
+    def _derive_next_action(attribution: Optional[dict[str, Any]]) -> Optional[str]:
+        if not isinstance(attribution, dict):
+            return None
+        recommendations = attribution.get("recommendations")
+        if not isinstance(recommendations, list) or not recommendations:
+            return None
+        first = recommendations[0]
+        if not isinstance(first, dict):
+            return None
+        action = first.get("action")
+        if isinstance(action, str) and action.strip():
+            return action.strip()
+        return None
+
+    @staticmethod
+    def _confidence_to_numeric(confidence: str) -> float:
+        confidence_value = confidence.value if hasattr(confidence, "value") else confidence
+        mapping = {
+            "high": 0.9,
+            "medium": 0.75,
+            "low": 0.6,
+        }
+        return mapping.get(str(confidence_value).strip().lower(), 0.6)
