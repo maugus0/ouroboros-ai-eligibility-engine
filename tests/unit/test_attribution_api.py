@@ -44,3 +44,17 @@ def test_internal_report_alias_handles_missing_report(internal_token_header, mon
     body = response.json()
     assert body["success"] is False
     assert body["message"] == "Attribution report not found"
+
+
+def test_internal_report_alias_handles_service_error(internal_token_header, monkeypatch):
+    async def fake_get_report(_self, _match_id: str):
+        raise RuntimeError("db unavailable")
+
+    monkeypatch.setattr(ExplainabilityService, "get_report", fake_get_report)
+
+    response = client.get("/api/v1/eligibility/report/match-err", headers=internal_token_header)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is False
+    assert body["message"] == "Unable to fetch attribution report right now"

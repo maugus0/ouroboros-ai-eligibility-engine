@@ -12,6 +12,12 @@ if str(ROOT_DIR) not in sys.path:
 
 load_dotenv(ROOT_DIR / ".env")
 
+from app.config import settings  # pylint: disable=wrong-import-position
+from app.repositories.db_pool import (  # pylint: disable=wrong-import-position
+    DatabasePoolConfig,
+    close_pool,
+    create_pool,
+)
 from app.services.embedding_service import EmbeddingService  # pylint: disable=wrong-import-position
 
 SAMPLE_RESEARCH_INTERESTS = [
@@ -50,6 +56,20 @@ SAMPLE_PROGRAM_RESEARCH_FOCUS = [
 
 
 async def seed_embeddings():
+    # Initialize database pool
+    pool_config = DatabasePoolConfig(
+        host=settings.get_db_host(),
+        port=settings.get_db_port(),
+        database=settings.get_db_name(),
+        user=settings.get_db_user(),
+        password=settings.get_db_password(),
+        min_size=settings.DB_POOL_MIN_SIZE,
+        max_size=settings.DB_POOL_MAX_SIZE,
+        timeout=settings.DB_CONNECTION_TIMEOUT,
+    )
+    await create_pool(pool_config)
+    print("Database pool initialized.")
+
     service = EmbeddingService()
 
     for sample in SAMPLE_RESEARCH_INTERESTS:
@@ -74,6 +94,8 @@ async def seed_embeddings():
         except Exception as exc:  # pylint: disable=broad-exception-caught
             print(f"  \u2717 Failed: {exc}")
 
+    # Close database pool
+    await close_pool()
     print("\nSeeding complete.")
 
 

@@ -179,3 +179,82 @@ async def test_evaluate_does_not_persist_embedding_model_as_llm_model(monkeypatc
     assert result["match_result"]["id"] == "match-1"
     assert captured_match_data["llm_model_used"] is None
     assert captured_match_data["llm_fallback_used"] is True
+    assert result["agent_reasoning"]["approach"].startswith("Compute weighted eligibility scores")
+    assert result["agent_reasoning"]["next_field"] is None
+    assert result["agent_reasoning"]["confidence"] == pytest.approx(0.9)
+
+
+@pytest.mark.asyncio
+async def test_evaluate_includes_agent_reasoning_with_mandatory_failure_context(monkeypatch):
+    async def fake_match_create(self, data: dict):
+        _ = (self, data)
+        return {
+            "id": "match-scholarship-1",
+            **data,
+        }
+
+    async def fake_history_create(self, data: dict):
+        _ = (self, data)
+        return {"id": "history-1"}
+
+    async def fake_generate_report(
+        self,
+        match_id: str,
+        user_profile: dict,
+        entity_data: dict,
+        score_breakdown: dict,
+        match_score: float,
+        score_metadata: dict,
+    ):
+        _ = (self, match_id, user_profile, entity_data, score_breakdown, match_score, score_metadata)
+        return {
+            "id": "report-1",
+            "recommendations": [{"action": "Improve GPA", "priority": "high"}],
+            "llm_provider": "rule_based",
+            "llm_model": None,
+        }
+
+    def fake_compute_score(user_profile: dict, scholarship: dict):
+        _ = (user_profile, scholarship)
+        return (
+            0.0,
+            {
+                "eligibility": 0.0,
+                "preferred_criteria": 0.0,
+                "funding_coverage": 0.0,
+                "competition_estimate": 0.0,
+            },
+            {
+                "eligibility": {
+                    "mandatory_passed": False,
+                    "failed_criteria": [
+                        {
+                            "criterion": "gpa",
+                            "message": "GPA 2.8 is below the minimum requirement of 3.5.",
+                        }
+                    ],
+                }
+            },
+        )
+
+    monkeypatch.setattr("app.services.matching_service.MatchResultRepository.create", fake_match_create)
+    monkeypatch.setattr("app.services.matching_service.ScoringHistoryRepository.create", fake_history_create)
+    monkeypatch.setattr("app.services.matching_service.ExplainabilityService.generate_report", fake_generate_report)
+    monkeypatch.setattr("app.services.matching_service.ScholarshipScorer.compute_score", fake_compute_score)
+
+    service = MatchingService()
+    result = await service.evaluate(
+        user_id="user-1",
+        entity_type="scholarship",
+        entity_id="scholarship-1",
+        user_profile={"gpa_normalized": 2.8},
+        entity_data={"minimum_gpa": 3.5},
+        include_attribution=True,
+    )
+
+    assert result["match_result"]["id"] == "match-scholarship-1"
+    assert result["agent_reasoning"]["next_field"] == "Improve GPA"
+    assert result["agent_reasoning"]["confidence"] == pytest.approx(0.6)
+    assert any(
+        "Mandatory eligibility gate failed" in factor for factor in result["agent_reasoning"]["decision_factors"]
+    )
