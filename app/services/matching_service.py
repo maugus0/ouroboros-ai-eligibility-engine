@@ -299,7 +299,7 @@ class MatchingService:
         }
 
     @staticmethod
-    def _determine_confidence(score: float) -> str:
+    def _determine_confidence(score: float) -> ConfidenceLevel:
         """Map score to confidence level."""
         if score >= settings.HIGH_CONFIDENCE_THRESHOLD:
             return ConfidenceLevel.HIGH
@@ -347,13 +347,14 @@ class MatchingService:
         total_score: float,
         breakdown: dict[str, float],
         metadata: dict[str, Any],
-        confidence: str,
+        confidence: ConfidenceLevel,
         include_attribution: bool,
         attribution: Optional[dict[str, Any]],
     ) -> dict[str, Any]:
         """Build deterministic agent_reasoning metadata for match evaluations."""
+        confidence_label = confidence.value if isinstance(confidence, ConfidenceLevel) else str(confidence)
         decision_factors: list[str] = [
-            f"Computed {entity_type} match score {round(total_score, 2)}/100 with confidence {confidence}.",
+            f"Computed {entity_type} match score {round(total_score, 2)}/100 with confidence {confidence_label}.",
             cls._build_top_contributors_factor(breakdown),
         ]
 
@@ -364,7 +365,7 @@ class MatchingService:
         if include_attribution:
             if isinstance(attribution, dict):
                 provider = attribution.get("llm_provider") or "unknown"
-                model = attribution.get("llm_model") or "rule_based"
+                model = attribution.get("llm_model") or "unknown"
                 decision_factors.append(f"Attribution generated via {provider} ({model}).")
             else:
                 decision_factors.append("Attribution was requested but could not be generated.")

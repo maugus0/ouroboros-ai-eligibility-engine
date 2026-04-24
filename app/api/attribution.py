@@ -24,7 +24,12 @@ async def get_attribution_report(match_id: str):
     try:
         report = await service.get_report(match_id)
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.error("attribution_report_fetch_failed", match_id=match_id, error=str(exc))
+        logger.error(
+            "attribution_report_fetch_failed",
+            match_id=match_id,
+            error=str(exc),
+            exc_info=True,
+        )
         return StandardResponse(
             success=False,
             message="Unable to fetch attribution report right now",
